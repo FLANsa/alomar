@@ -33,13 +33,15 @@
     .card-header h3 { margin:0; font-size:1.1rem; font-weight:700; }
     .card-body { padding:20px; }
     .sticker-preview{ border:2px dashed var(--muted); padding:20px; background:#f9f9f9; border-radius:10px; display:flex; justify-content:center; margin-bottom:18px; }
-    .sticker{ width:6cm; height:3cm; background:#fff; border:1px solid #ddd; box-sizing:border-box; display:flex; flex-direction:column; padding:0.2cm; gap:0.15cm; }
-    .row2{ display:flex; flex-direction:column; align-items:center; text-align:center; width:33.333%; line-height:1.1; }
-    .label{ color:#222; font-weight:700; font-size:3.0mm; line-height:1.1; text-align:center; }
-    .value{ color:#000; font-weight:800; font-size:4.2mm; line-height:1.05; text-align:center; }
-    .shop{ text-align:center; font-weight:700; font-size:4.5mm; line-height:1.1; margin-bottom:0.1cm; }
-    .rows{ display:flex; flex-direction:row; gap:0.1cm; justify-content:space-between; margin-top:-0.2cm; }
-    .sticker-barcode canvas{ width:100%; height:auto; max-height:1.2cm; image-rendering:crisp-edges; image-rendering:pixelated; display:block; }
+    .sticker{ width:40mm; height:25mm; background:#fff; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; padding:2.15mm 3.4mm 1.15mm; color:#000; }
+    .shop{ flex:0 0 auto; text-align:center; font-weight:900; font-size:3.75mm; line-height:0.95; white-space:nowrap; margin:0 0 0.9mm; }
+    .model-line{ flex:0 0 auto; direction:ltr; text-align:center; font-weight:800; font-size:2.45mm; line-height:1; white-space:nowrap; overflow:hidden; margin:0 0 1.05mm; }
+    .sticker-barcode{ flex:0 0 auto; height:6.35mm; display:flex; align-items:stretch; justify-content:center; margin:0 0 0.85mm; }
+    .sticker-barcode canvas{ width:100%; height:100%; image-rendering:crisp-edges; image-rendering:pixelated; display:block; }
+    .rows{ flex:0 0 auto; display:flex; flex-direction:row; gap:0.5mm; justify-content:space-between; align-items:flex-start; margin:0; }
+    .row2{ display:flex; flex:1 1 0; min-width:0; flex-direction:column; align-items:center; text-align:center; line-height:1; }
+    .label{ color:#111; font-weight:900; font-size:1.85mm; line-height:1; text-align:center; white-space:nowrap; margin-bottom:0.5mm; }
+    .value{ color:#000; font-weight:900; font-size:3.25mm; line-height:0.95; text-align:center; white-space:nowrap; }
     .actions{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn{ appearance:none; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700; font-family:inherit; }
     .btn-primary{ background:#10b981; color:#fff; }
@@ -64,6 +66,7 @@
         <div class="sticker-preview">
           <div id="sticker" class="sticker">
             <div class="shop">عمر للاتصالات</div>
+            <div class="model-line" id="phone-model">جاري التحميل...</div>
             <div class="sticker-barcode"><canvas id="barcode-canvas"></canvas></div>
             <div class="rows">
               <div class="row2">
@@ -102,10 +105,11 @@
     JsBarcode(canvas, String(code||'').trim(), {
       format:"CODE128",
       width:3,
-      height:35,
+      height:70,
       displayValue:false,
       background:"#ffffff",
-      lineColor:"#000000"
+      lineColor:"#000000",
+      margin:2
     });
   }
 
@@ -149,31 +153,26 @@
 
   function valuesFromPhone(phone){
     const phone_number = phone?.phone_number || phone?.barcode || phone?.id || '';
+    const brand = phone?.brand || phone?.manufacturer || '';
+    const model = phone?.model || phone?.phone_model || '';
+    const modelLine = [brand, model].filter(Boolean).join(' ').trim() || '-';
     const memory = phone?.phone_memory || phone?.memory || phone?.storage || '-';
-    // Hide battery for new phones, show for used phones
     let battery = '-';
-    if (phone?.condition === 'new') {
-      battery = ''; // Empty for new phones - will be hidden
-    } else if (phone?.battery_level != null && phone.battery_level !== '') {
+    if (phone?.battery_level != null && phone.battery_level !== '') {
       battery = String(phone.battery_level);
     } else if (phone?.age != null) {
       battery = String(phone.age); // تم الحفظ من صفحة المستعمل كـ battery_level أيضاً
+    } else if (phone?.condition === 'new') {
+      battery = '100';
     }
-    return { phone_number, memory, battery };
+    return { phone_number, modelLine, memory, battery };
   }
 
-  function fillSticker({phone_number, memory, battery}){
+  function fillSticker({phone_number, modelLine, memory, battery}){
     document.getElementById('phone-number').textContent = phone_number || '-';
+    document.getElementById('phone-model').textContent = modelLine || '-';
     document.getElementById('phone-memory').textContent = memory || '-';
-    
-    // Hide battery level row for new phones (when battery is empty)
-    const batteryRow = document.querySelector('.row2:nth-child(2)'); // Second row (battery)
-    if (battery === '') {
-      batteryRow.style.display = 'none';
-    } else {
-      batteryRow.style.display = 'flex';
-      document.getElementById('battery-level').textContent = battery || '-';
-    }
+    document.getElementById('battery-level').textContent = battery || '-';
     
     generateBarcode(phone_number || '-');
   }
@@ -237,7 +236,7 @@
         return;
       }else{
         // If not found anywhere, still show the code the user passed
-        fillSticker({ phone_number: pn, memory:'-', battery:'-' });
+        fillSticker({ phone_number: pn, modelLine:'-', memory:'-', battery:'-' });
         alert('لم يتم العثور على بيانات الهاتف في القاعدة، تم استخدام رقم الجهاز فقط.');
         return;
       }
@@ -255,7 +254,7 @@
     // لا نولّد رقماً جديداً هنا لتجنب فجوات وتداخل مع أرقام الهواتف المسجلة.
     // عرض رسالة توجيهية وملصق placeholder.
     alert('لم يتم تحديد رقم جهاز.\n\nافتح صفحة الطباعة من صفحة الهاتف (إضافة هاتف أو البحث) أو أضِف رقم الجهاز في الرابط:\nprint_barcode.html?phone_number=XXXXXX');
-    fillSticker({ phone_number: '—', memory: '—', battery: '—' });
+    fillSticker({ phone_number: '—', modelLine: '—', memory: '—', battery: '—' });
   }
 
   document.addEventListener('DOMContentLoaded', loadPhoneData);
