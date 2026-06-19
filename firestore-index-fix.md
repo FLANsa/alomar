@@ -38,7 +38,7 @@ FirebaseError: The query requires an index
 ### 3. نشر الفهارس
 لنشر الفهارس إلى Firebase:
 ```bash
-firebase use aldhahbi-7a93b
+firebase use alomar-51a84
 firebase deploy --only firestore:indexes
 ```
 
@@ -61,4 +61,3 @@ firebase deploy --only firestore:indexes
 - ✅ **إذا كان الفهرس جاهزاً**: يستخدم الاستعلام الأمثل مع الفهرس
 - ✅ **إذا لم يكتمل الفهرس بعد**: يستخدم الحل البديل تلقائياً
 - ✅ **إذا لم يكن هناك date range**: يستخدم استعلام بسيط بدون فهرس معقد
-

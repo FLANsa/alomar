@@ -1,27 +1,27 @@
-# Aldhahbi - Environment Variables
+# العمر للاتصالات - Environment Variables
 # متغيرات البيئة لنظام إدارة متجر الجوالات
 
 # Firebase Configuration
-FIREBASE_API_KEY=AIzaSyCOxP_fOupA-OAyO4oxYe54ohZ8_YzS7zc
-FIREBASE_AUTH_DOMAIN=aldhahbi-7a93b.firebaseapp.com
-FIREBASE_PROJECT_ID=aldhahbi-7a93b
-FIREBASE_STORAGE_BUCKET=aldhahbi-7a93b.firebasestorage.app
-FIREBASE_MESSAGING_SENDER_ID=392213757842
-FIREBASE_APP_ID=1:392213757842:web:510288ddc8ccd5d7e48b4b
-FIREBASE_MEASUREMENT_ID=G-77EPVYFWPB
+FIREBASE_API_KEY=AIzaSyCgxnJrx47TyjynhvFib5GlWscctUlMeGI
+FIREBASE_AUTH_DOMAIN=alomar-51a84.firebaseapp.com
+FIREBASE_PROJECT_ID=alomar-51a84
+FIREBASE_STORAGE_BUCKET=alomar-51a84.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=494676328578
+FIREBASE_APP_ID=1:494676328578:web:f747b5e0ab4ea3591f749b
+FIREBASE_MEASUREMENT_ID=G-1EB4LL9V8J
 
 # Application Settings
 NODE_ENV=production
-APP_NAME=Aldhahbi
+APP_NAME=العمر للاتصالات
 APP_VERSION=2.0.0
 APP_DESCRIPTION=نظام إدارة متجر الجوالات
 
 # Company Information
-COMPANY_NAME=الركبي للاتصالات
-COMPANY_NAME_EN=Al-Rakbi for Communications
+COMPANY_NAME=العمر للاتصالات
+COMPANY_NAME_EN=Alomar Communications
 COMPANY_ADDRESS=الرياض، المملكة العربية السعودية
 COMPANY_PHONE=0599254441
-COMPANY_EMAIL=support@aldhahbi.com
+COMPANY_EMAIL=info@alomar.com
 
 # Database Settings
 DATABASE_TYPE=firestore
@@ -31,9 +31,9 @@ DATABASE_COLLECTION_SALES=sales
 DATABASE_COLLECTION_PHONE_TYPES=phone_types
 
 # Security Settings
-JWT_SECRET=aldhahbi-secret-key-2025
-SESSION_SECRET=aldhahbi-session-secret
-ENCRYPTION_KEY=aldhahbi-encryption-key
+JWT_SECRET=alomar-secret-key-2025
+SESSION_SECRET=alomar-session-secret
+ENCRYPTION_KEY=alomar-encryption-key
 
 # VAT Settings (Saudi Arabia)
 VAT_RATE=0.15

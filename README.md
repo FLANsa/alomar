@@ -1,4 +1,4 @@
-# Aldhahbi - نظام إدارة متجر الجوالات
+# العمر للاتصالات - نظام إدارة متجر الجوالات
 
 نظام متكامل لإدارة متجر الهواتف المحمولة الجديدة والمستعملة باللغة العربية.
 
@@ -35,12 +35,12 @@
 2. **اضغط على "New +" ثم "Static Site"**
 3. **اتصل بـ GitHub:**
    - اختر "Build and deploy from a Git repository"
-   - اختر مستودع `aldhahbi`
+   - اختر مستودع `alomar`
    - اختر الفرع `main`
 
 4. **إعدادات النشر:**
    ```
-   Name: aldhahbi
+   Name: alomar
    Branch: main
    Root Directory: ./
    Build Command: (اتركه فارغ)
@@ -56,7 +56,7 @@
 ```yaml
 services:
   - type: static
-    name: aldhahbi
+    name: alomar
     buildCommand: ""
     staticPublishPath: ./
     envVars:
@@ -75,7 +75,7 @@ services:
 
 ### 1. إنشاء مشروع Firebase
 - اذهب إلى [Firebase Console](https://console.firebase.google.com)
-- أنشئ مشروع جديد باسم `aldhahbi`
+- أنشئ مشروع جديد باسم `alomar-51a84`
 
 ### 2. تفعيل الخدمات المطلوبة
 - **Firestore Database** - قاعدة البيانات
@@ -142,8 +142,8 @@ services:
 
 ```bash
 # استنساخ المشروع
-git clone https://github.com/FLANsa/aldhahbi.git
-cd aldhahbi
+git clone https://github.com/FLANsa/alomar.git
+cd alomar
 
 # تشغيل الخادم المحلي
 python3 -m http.server 8000
@@ -155,7 +155,7 @@ npx http-server -p 8000
 ## 📞 الدعم
 
 للدعم التقني أو الاستفسارات:
-- **GitHub Issues**: [إنشاء مشكلة](https://github.com/FLANsa/aldhahbi/issues)
+- **GitHub Issues**: [إنشاء مشكلة](https://github.com/FLANsa/alomar/issues)
 - **Email**: support@blackfingerprint.com
 
 ## 📄 الترخيص
@@ -164,4 +164,4 @@ npx http-server -p 8000
 
 ---
 
-**Aldhahbi** - رؤيتنا هي تقديم أفضل حلول إدارة متاجر الجوالات في المملكة العربية السعودية.
+**العمر للاتصالات** - رؤيتنا هي تقديم أفضل حلول إدارة متاجر الجوالات في المملكة العربية السعودية.

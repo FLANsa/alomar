@@ -1,7 +1,7 @@
 {
-  "name": "تجربة-النظام-للإتصالات",
+  "name": "alomar-communications",
   "version": "1.0.0",
-  "description": "الركبي للاتصالات - A web application for managing phone inventory and sales",
+  "description": "العمر للاتصالات - A web application for managing phone inventory and sales",
   "main": "index.html",
   "scripts": {
     "start": "python3 -m http.server 8000",
@@ -19,13 +19,13 @@
     "firebase",
     "demo"
   ],
-  "author": "الركبي للاتصالات",
+  "author": "العمر للاتصالات",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FLANsa/phone-store-demo.git"
+    "url": "https://github.com/FLANsa/alomar.git"
   },
-  "homepage": "https://github.com/FLANsa/phone-store-demo",
+  "homepage": "https://github.com/FLANsa/alomar",
   "engines": {
     "node": ">=14.0.0",
     "python": ">=3.7.0"

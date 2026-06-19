@@ -4,7 +4,7 @@ This guide explains how to configure Firebase for the Phone Store Demo project.
 
 ## Prerequisites
 
-1. Firebase project: `phone-store-demo`
+1. Firebase project: `alomar-51a84`
 2. Firebase CLI installed
 3. Admin access to Firebase project
 
@@ -46,7 +46,7 @@ firebase deploy --only storage
 5. Optionally enable "Google" provider
 
 **Configure Authorized Domains:**
-- Add your Render domain: `https://phone-store-demo.onrender.com`
+- Add your Render domain: `https://alomar.onrender.com`
 - Add localhost for development: `http://localhost:8000`
 
 ### 4. Firebase Analytics
@@ -185,5 +185,5 @@ For Firebase support:
 
 ---
 
-**Project**: phone-store-demo
-**Repository**: https://github.com/FLANsa/phone-store-demo
+**Project**: alomar-51a84
+**Repository**: https://github.com/FLANsa/alomar

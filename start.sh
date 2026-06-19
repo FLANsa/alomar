@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# بصمة سوداء - نظام إدارة متجر الهواتف
+# العمر للاتصالات - نظام إدارة متجر الهواتف
 # Render Deployment Script
 
-echo "🚀 Starting بصمة سوداء Phone Store Management System..."
+echo "Starting العمر للاتصالات Phone Store Management System..."
 
 # Check if Python is available
 if command -v python3 &> /dev/null; then

@@ -4,7 +4,7 @@ This guide explains how to deploy the Phone Store Demo to Render as a static sit
 
 ## Prerequisites
 
-1. GitHub repository: `https://github.com/FLANsa/phone-store-demo`
+1. GitHub repository: `https://github.com/FLANsa/alomar`
 2. Render account
 3. Firebase project configured
 
@@ -15,12 +15,12 @@ This guide explains how to deploy the Phone Store Demo to Render as a static sit
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Click "New +" → "Static Site"
 3. Connect your GitHub account if not already connected
-4. Select repository: `FLANsa/phone-store-demo`
+4. Select repository: `FLANsa/alomar`
 
 ### 2. Configure Static Site Settings
 
 **Basic Settings:**
-- **Name**: `phone-store-demo`
+- **Name**: `alomar`
 - **Branch**: `main`
 - **Root Directory**: Leave empty (uses repository root)
 - **Build Command**: Leave empty (no build required)
@@ -37,8 +37,8 @@ If you need to override Firebase config via environment variables:
 ```
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-VITE_FIREBASE_PROJECT_ID=phone-store-demo
-VITE_FIREBASE_STORAGE_BUCKET=phone-store-demo.firebasestorage.app
+VITE_FIREBASE_PROJECT_ID=alomar-51a84
+VITE_FIREBASE_STORAGE_BUCKET=alomar-51a84.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
@@ -62,7 +62,7 @@ VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ## File Structure for Static Deployment
 
 ```
-phone-store-demo/
+alomar/
 ├── index.html              # Main entry point
 ├── login.html              # Login page
 ├── dashboard.html          # Dashboard
@@ -123,4 +123,4 @@ phone-store-demo/
 ---
 
 **Deployment URL**: Will be provided by Render after successful deployment
-**Repository**: https://github.com/FLANsa/phone-store-demo
+**Repository**: https://github.com/FLANsa/alomar

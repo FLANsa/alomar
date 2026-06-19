@@ -2,13 +2,13 @@
 // إعدادات Firebase للمستودع الجديد - نسخة CDN
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCOxP_fOupA-OAyO4oxYe54ohZ8_YzS7zc",
-  authDomain: "aldhahbi-7a93b.firebaseapp.com",
-  projectId: "aldhahbi-7a93b",
-  storageBucket: "aldhahbi-7a93b.firebasestorage.app",
-  messagingSenderId: "392213757842",
-  appId: "1:392213757842:web:510288ddc8ccd5d7e48b4b",
-  measurementId: "G-77EPVYFWPB"
+  apiKey: "AIzaSyCgxnJrx47TyjynhvFib5GlWscctUlMeGI",
+  authDomain: "alomar-51a84.firebaseapp.com",
+  projectId: "alomar-51a84",
+  storageBucket: "alomar-51a84.firebasestorage.app",
+  messagingSenderId: "494676328578",
+  appId: "1:494676328578:web:f747b5e0ab4ea3591f749b",
+  measurementId: "G-1EB4LL9V8J"
 };
 
 // تهيئة Firebase باستخدام CDN

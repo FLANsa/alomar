@@ -10,7 +10,7 @@
 
 ### 1. افتح Firebase Console
 - اذهب إلى: https://console.firebase.google.com/
-- اختر المشروع: `phone-store-demo`
+- اختر المشروع: `alomar-51a84`
 
 ### 2. انتقل إلى Firestore Database
 - من القائمة الجانبية، اختر "Firestore Database"
@@ -105,13 +105,13 @@ Fields:
 
 ```bash
 # تأكد من أنك في مجلد المشروع
-cd /path/to/phone-store-demo
+cd /path/to/alomar
 
 # سجل دخول إلى Firebase
 firebase login
 
 # استخدم المشروع الصحيح
-firebase use phone-store-demo
+firebase use alomar-51a84
 
 # نشر الفهارس
 firebase deploy --only firestore:indexes

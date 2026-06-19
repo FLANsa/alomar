@@ -1,6 +1,6 @@
 /**
  * Main Application Entry Point
- * الركبي للاتصالات - Phone Store Management System
+ * العمر للاتصالات - Phone Store Management System
  */
 
 // Global application state
