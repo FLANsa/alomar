@@ -136,6 +136,9 @@
 
 <!-- سكربتات Firebase Integration -->
 <script>
+  let currentAccessory = null;
+  let currentAccessoryId = null;
+
   // تهيئة Firebase عند تحميل الصفحة
   document.addEventListener('DOMContentLoaded', async () => {
     // انتظار تهيئة Firebase
@@ -144,10 +147,24 @@
     if (window.storage && window.storage.isFirebaseAvailable) {
       console.log('✅ Firebase متاح في صفحة التعديل');
       await loadCategories();
+      await loadAccessoryForEdit();
     } else {
       console.log('⚠️ Firebase غير متاح، استخدام البيانات المحلية');
       populateCategories();
+      alert('Firebase غير متاح. تأكد من الاتصال بالإنترنت.');
     }
+
+    document.getElementById('purchase_price').addEventListener('input', function () {
+      const priceWithVAT = parseFloat(this.value) || 0;
+      const priceWithoutVAT = priceWithVAT / 1.15;
+      console.log('Purchase price without VAT:', priceWithoutVAT.toFixed(2));
+    });
+
+    document.getElementById('selling_price').addEventListener('input', function () {
+      const priceWithVAT = parseFloat(this.value) || 0;
+      const priceWithoutVAT = priceWithVAT / 1.15;
+      console.log('Selling price without VAT:', priceWithoutVAT.toFixed(2));
+    });
   });
 
   // تحميل الفئات من Firebase
@@ -180,23 +197,38 @@
     { name: "screen_protector", arabic_name: "حماية الشاشة" }
   ];
 
-  // محاكاة عنصر أكسسوار جاري تعديله (بدل accessory من السيرفر)
-  const currentAccessory = {
-    name: "غطاء شفاف",
-    category: "case",
-    arabic_category: "أغلفة",
-    description: "سيليكون مرن",
-    purchase_price: 28.75, // مع الضريبة
-    selling_price: 51.75,  // مع الضريبة
-    quantity_in_stock: 20,
-    supplier: "XYZ للتوريد",
-    notes: ""
-  };
+  async function loadAccessoryForEdit() {
+    const params = new URLSearchParams(window.location.search);
+    currentAccessoryId = params.get('id') || params.get('accessory_id') || params.get('barcode');
+
+    if (!currentAccessoryId) {
+      alert('لم يتم تحديد الأكسسوار المطلوب تعديله');
+      window.location.href = 'list_accessories_simple.html';
+      return;
+    }
+
+    const accessories = await window.storage.getAccessories();
+    currentAccessory = accessories.find(accessory =>
+      String(accessory.id) === String(currentAccessoryId) ||
+      String(accessory.barcode || '') === String(currentAccessoryId) ||
+      String(accessory.accessory_number || '') === String(currentAccessoryId)
+    );
+
+    if (!currentAccessory) {
+      alert('الأكسسوار غير موجود في قاعدة البيانات');
+      window.location.href = 'list_accessories_simple.html';
+      return;
+    }
+
+    fillFormFromAccessory();
+  }
 
   function fillFormFromAccessory() {
+    if (!currentAccessory) return;
+
     document.getElementById('accessory_title').textContent = currentAccessory.name || "—";
     document.getElementById('name').value = currentAccessory.name || "";
-    populateCategories();
+    ensureCategoryOption(currentAccessory.category);
     document.getElementById('category').value = currentAccessory.category || "";
     document.getElementById('description').value = currentAccessory.description || "";
     document.getElementById('purchase_price').value = currentAccessory.purchase_price || "";
@@ -217,22 +249,17 @@
     });
   }
 
-  // نفس سلوك الصفحة الأصلية: حساب السعر قبل الضريبة بالـ console
-  document.addEventListener('DOMContentLoaded', () => {
-    fillFormFromAccessory();
-
-    document.getElementById('purchase_price').addEventListener('input', function () {
-      const priceWithVAT = parseFloat(this.value) || 0;
-      const priceWithoutVAT = priceWithVAT / 1.15;
-      console.log('Purchase price without VAT:', priceWithoutVAT.toFixed(2));
-    });
-
-    document.getElementById('selling_price').addEventListener('input', function () {
-      const priceWithVAT = parseFloat(this.value) || 0;
-      const priceWithoutVAT = priceWithVAT / 1.15;
-      console.log('Selling price without VAT:', priceWithoutVAT.toFixed(2));
-    });
-  });
+  function ensureCategoryOption(category) {
+    if (!category) return;
+    const select = document.getElementById('category');
+    const exists = Array.from(select.options).some(option => option.value === category);
+    if (!exists) {
+      const option = document.createElement('option');
+      option.value = category;
+      option.textContent = category;
+      select.appendChild(option);
+    }
+  }
 
   // بدائل محلية لعمليات إضافة/حذف/تحديث الفئات (بدون خادم)
   function addAccessoryCategory() {
@@ -266,6 +293,7 @@
         purchase_price: parseFloat(document.getElementById('purchase_price').value) || 0,
         selling_price: parseFloat(document.getElementById('selling_price').value) || 0,
         quantity: parseInt(document.getElementById('quantity').value) || 0,
+        quantity_in_stock: parseInt(document.getElementById('quantity').value) || 0,
         supplier: document.getElementById('supplier').value.trim(),
         notes: document.getElementById('notes').value.trim(),
         date_updated: new Date().toISOString()
@@ -299,12 +327,14 @@
 
       // حفظ في Firebase
       if (window.storage && window.storage.isFirebaseAvailable) {
-        const accessoryId = await window.storage.updateAccessory(payload);
-        if (accessoryId) {
-          console.log('✅ تم تحديث الأكسسوار في Firebase:', accessoryId);
+        const success = await window.storage.updateAccessory(currentAccessoryId, payload);
+        if (success) {
+          console.log('✅ تم تحديث الأكسسوار في Firebase:', currentAccessoryId);
           alert('تم تحديث الأكسسوار بنجاح!');
           // إعادة توجيه إلى صفحة قائمة الأكسسوارات
           window.location.href = 'list_accessories_simple.html';
+        } else {
+          alert('فشل تحديث الأكسسوار في Firebase');
         }
       } else {
         alert('Firebase غير متاح. تأكد من الاتصال بالإنترنت.');
