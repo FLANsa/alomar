@@ -3,26 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="عمر">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <title>تقرير أعمال الصيانة - عمر للاتصالات</title>
-    
+    <title>تقرير أعمال الصيانة - الركبي للاتصالات</title>
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="css/mobile.css" rel="stylesheet">
     <!-- Google Fonts - Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Firebase Scripts -->
-    <script type="module" src="js/firebase-config-cdn.js"></script>
-    <script type="module" src="js/firebase-database-cdn.js"></script>
-    
+    <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+    <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+
     <style>
         body {
             font-family: 'Cairo', sans-serif;
@@ -30,42 +23,42 @@
             margin: 0;
             padding: 20px;
         }
-        
+
         .report-container {
             max-width: 1200px;
             margin: 0 auto;
             background: white;
         }
-        
+
         .report-header {
             text-align: center;
             border-bottom: 2px solid #2c3e50;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        
+
         .report-header h1 {
             color: #2c3e50;
             margin-bottom: 10px;
         }
-        
+
         .report-header p {
             color: #6c757d;
             margin: 5px 0;
         }
-        
+
         .filters-summary {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        
+
         .filters-summary h5 {
             margin-bottom: 10px;
             color: #2c3e50;
         }
-        
+
         .filter-item {
             display: inline-block;
             background: #e9ecef;
@@ -74,14 +67,14 @@
             margin: 3px;
             font-size: 0.9em;
         }
-        
+
         .report-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 30px;
             font-size: 0.85em;
         }
-        
+
         .report-table th {
             background: #2c3e50;
             color: white;
@@ -89,45 +82,45 @@
             text-align: center;
             font-weight: 600;
         }
-        
+
         .report-table td {
             padding: 8px;
             border-bottom: 1px solid #dee2e6;
             vertical-align: top;
         }
-        
+
         .report-table tr:nth-child(even) {
             background: #f8f9fa;
         }
-        
+
         .parts-list {
             margin: 0;
             padding: 0;
             list-style: none;
         }
-        
+
         .parts-list li {
             padding: 3px 0;
             border-bottom: 1px dashed #dee2e6;
         }
-        
+
         .parts-list li:last-child {
             border-bottom: none;
         }
-        
+
         .part-name {
             font-weight: 600;
         }
-        
+
         .part-rep {
             color: #6c757d;
             font-size: 0.9em;
         }
-        
+
         .part-cost {
             color: #28a745;
         }
-        
+
         .summary-section {
             background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
@@ -135,112 +128,112 @@
             border-radius: 8px;
             margin-top: 30px;
         }
-        
+
         .summary-section h4 {
             margin-bottom: 20px;
             border-bottom: 1px solid rgba(255,255,255,0.3);
             padding-bottom: 10px;
         }
-        
+
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
         }
-        
+
         .summary-item {
             background: rgba(255,255,255,0.1);
             padding: 15px;
             border-radius: 8px;
             text-align: center;
         }
-        
+
         .summary-item .label {
             font-size: 0.9em;
             opacity: 0.9;
             margin-bottom: 5px;
         }
-        
+
         .summary-item .value {
             font-size: 1.4em;
             font-weight: 700;
         }
-        
+
         .status-badge {
             padding: 3px 8px;
             border-radius: 12px;
             font-size: 0.8em;
             font-weight: 600;
         }
-        
+
         .status-pending {
             background: #fff3cd;
             color: #856404;
         }
-        
+
         .status-done {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .status-canceled {
             background: #f8d7da;
             color: #721c24;
         }
-        
+
         .loading {
             text-align: center;
             padding: 50px;
             font-size: 1.2rem;
             color: #6c757d;
         }
-        
+
         .error {
             text-align: center;
             padding: 50px;
             color: #dc3545;
             font-size: 1.2rem;
         }
-        
+
         .no-data {
             text-align: center;
             padding: 50px;
             color: #6c757d;
             font-size: 1.2rem;
         }
-        
+
         .print-btn {
             position: fixed;
             top: 20px;
             left: 20px;
             z-index: 1000;
         }
-        
+
         .close-btn {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 1000;
         }
-        
+
         @media print {
             .print-btn, .close-btn {
                 display: none !important;
             }
-            
+
             body {
                 padding: 0;
                 margin: 0;
             }
-            
+
             .report-container {
                 max-width: 100%;
             }
-            
+
             .report-table {
                 font-size: 0.75em;
             }
-            
+
             .summary-section {
                 background: #2c3e50 !important;
                 -webkit-print-color-adjust: exact;
@@ -254,7 +247,7 @@
     <button class="btn btn-primary print-btn" onclick="window.print()">
         <i class="fas fa-print"></i> طباعة التقرير
     </button>
-    
+
     <button class="btn btn-secondary close-btn" onclick="window.close()">
         <i class="fas fa-times"></i> إغلاق
     </button>
@@ -263,19 +256,19 @@
         <div id="loading" class="loading">
             <i class="fas fa-spinner fa-spin"></i> جاري تحميل بيانات التقرير...
         </div>
-        
+
         <div id="error" class="error" style="display: none;">
             <i class="fas fa-exclamation-triangle"></i> حدث خطأ في تحميل البيانات
         </div>
-        
+
         <div id="reportContent" style="display: none;">
             <!-- Report Header -->
             <div class="report-header">
                 <h1><i class="fas fa-wrench"></i> تقرير أعمال الصيانة</h1>
-                <p>عمر للاتصالات</p>
+                <p>الركبي للاتصالات للاتصالات</p>
                 <p id="reportDate">تاريخ التقرير: <span></span></p>
             </div>
-            
+
             <!-- Filters Summary -->
             <div class="filters-summary" id="filtersSummary">
                 <h5><i class="fas fa-filter"></i> الفلاتر المطبقة:</h5>
@@ -283,9 +276,8 @@
                     <!-- الفلاتر المطبقة ستُضاف هنا -->
                 </div>
             </div>
-            
+
             <!-- Jobs Table -->
-            <div class="table-responsive">
             <table class="report-table">
                 <thead>
                     <tr>
@@ -307,13 +299,12 @@
                     <!-- البيانات ستُضاف هنا -->
                 </tbody>
             </table>
-            </div>
 
             <!-- No Data Message -->
             <div id="noData" class="no-data" style="display: none;">
                 <i class="fas fa-inbox"></i> لا توجد بيانات تطابق الفلاتر المحددة
             </div>
-            
+
             <!-- Summary Section -->
             <div class="summary-section" id="summarySection">
                 <h4><i class="fas fa-chart-bar"></i> ملخص التقرير</h4>
@@ -344,10 +335,10 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Report Footer -->
             <div class="text-center mt-4 text-muted">
-                <p>تم إنشاء هذا التقرير بواسطة نظام عمر للاتصالات</p>
+                <p>تم إنشاء هذا التقرير بواسطة نظام الركبي للاتصالات</p>
                 <p id="generatedAt"></p>
             </div>
         </div>
@@ -364,7 +355,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Parse URL parameters
             parseFilters();
-            
+
             // Wait for Firebase to initialize
             setTimeout(loadReportData, 1000);
         });
@@ -372,7 +363,7 @@
         // Parse filters from URL
         function parseFilters() {
             const urlParams = new URLSearchParams(window.location.search);
-            
+
             filters = {
                 status: urlParams.get('status') || '',
                 repId: urlParams.get('repId') || '',
@@ -380,7 +371,7 @@
                 dateFrom: urlParams.get('dateFrom') || '',
                 dateTo: urlParams.get('dateTo') || ''
             };
-            
+
             console.log('📊 Filters parsed:', filters);
         }
 
@@ -388,7 +379,7 @@
         async function loadReportData() {
             try {
                 console.log('🔄 Loading report data...');
-                
+
                 if (!window.firebaseDatabase) {
                     console.error('❌ Firebase database not initialized');
                     showError('قاعدة البيانات غير متاحة');
@@ -414,7 +405,7 @@
 
                 // Load jobs with filters
                 jobsData = await window.firebaseDatabase.getMaintenanceJobs(queryFilters);
-                
+
                 // Filter by repId if specified (need to check in parts array)
                 if (filters.repId) {
                     jobsData = jobsData.filter(job => {
@@ -434,7 +425,7 @@
 
                 // Display report
                 displayReport();
-                
+
             } catch (error) {
                 console.error('❌ Error loading report data:', error);
                 showError('حدث خطأ في تحميل البيانات: ' + (error.message || 'خطأ غير معروف'));
@@ -446,7 +437,7 @@
             // Hide loading
             document.getElementById('loading').style.display = 'none';
             document.getElementById('reportContent').style.display = 'block';
-            
+
             // Set report date
             document.querySelector('#reportDate span').textContent = new Date().toLocaleDateString('ar-SA', {
                 year: 'numeric',
@@ -455,25 +446,25 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            
+
             // Display applied filters
             displayFilters();
-            
+
             // Check if there's data
             if (jobsData.length === 0) {
                 document.getElementById('noData').style.display = 'block';
                 document.getElementById('summarySection').style.display = 'none';
                 return;
             }
-            
+
             // Display jobs table
             displayJobsTable();
-            
+
             // Display summary
             displaySummary();
-            
+
             // Set generated time
-            document.getElementById('generatedAt').textContent = 
+            document.getElementById('generatedAt').textContent =
                 'تم إنشاء التقرير في: ' + new Date().toLocaleString('ar-SA');
         }
 
@@ -481,7 +472,7 @@
         function displayFilters() {
             const container = document.getElementById('appliedFilters');
             let filtersHTML = '';
-            
+
             if (filters.status) {
                 const statusText = {
                     'pending': 'قيد الصيانة',
@@ -490,29 +481,29 @@
                 };
                 filtersHTML += `<span class="filter-item">الحالة: ${statusText[filters.status] || filters.status}</span>`;
             }
-            
+
             if (filters.repId) {
                 const rep = repsData.find(r => r.id === filters.repId);
                 filtersHTML += `<span class="filter-item">المندوب: ${rep ? rep.name : filters.repId}</span>`;
             }
-            
+
             if (filters.techId) {
                 const tech = techniciansData.find(t => t.id === filters.techId);
                 filtersHTML += `<span class="filter-item">الفني: ${tech ? tech.name : filters.techId}</span>`;
             }
-            
+
             if (filters.dateFrom) {
                 filtersHTML += `<span class="filter-item">من: ${filters.dateFrom}</span>`;
             }
-            
+
             if (filters.dateTo) {
                 filtersHTML += `<span class="filter-item">إلى: ${filters.dateTo}</span>`;
             }
-            
+
             if (!filtersHTML) {
                 filtersHTML = '<span class="filter-item">جميع البيانات</span>';
             }
-            
+
             container.innerHTML = filtersHTML;
         }
 
@@ -520,12 +511,12 @@
         function displayJobsTable() {
             const tbody = document.getElementById('jobsTableBody');
             tbody.innerHTML = '';
-            
+
             jobsData.forEach((job, index) => {
                 // Extract parts and reps info
                 let partsHTML = '';
                 let totalPartCost = 0;
-                
+
                 if (job.parts && Array.isArray(job.parts) && job.parts.length > 0) {
                     partsHTML = '<ul class="parts-list">';
                     job.parts.forEach(part => {
@@ -554,7 +545,7 @@
                     partsHTML = '<span class="text-muted">لا توجد قطع</span>';
                     totalPartCost = job.totalPartCost || 0;
                 }
-                
+
                 // Format date
                 let visitDate = '-';
                 if (job.visitDate) {
@@ -568,15 +559,15 @@
                         visitDate = '-';
                     }
                 }
-                
+
                 // Device info
-                const deviceInfo = job.deviceModel ? 
+                const deviceInfo = job.deviceModel ?
                     `${getDeviceTypeText(job.deviceType) || ''} ${job.deviceModel}`.trim() : '-';
-                
+
                 // Status
                 const statusClass = `status-${job.status || 'pending'}`;
                 const statusText = getStatusText(job.status);
-                
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
@@ -606,7 +597,7 @@
             let totalProfit = 0;
             let totalTechCommission = 0;
             let totalShopProfit = 0;
-            
+
             jobsData.forEach(job => {
                 // Calculate total part cost
                 if (job.parts && Array.isArray(job.parts) && job.parts.length > 0) {
@@ -616,13 +607,13 @@
                 } else if (job.totalPartCost) {
                     totalPartCost += Number(job.totalPartCost) || 0;
                 }
-                
+
                 totalRevenue += Number(job.amountCharged) || 0;
                 totalProfit += Number(job.profit) || 0;
                 totalTechCommission += Number(job.techCommission) || 0;
                 totalShopProfit += Number(job.shopProfit) || 0;
             });
-            
+
             document.getElementById('totalJobs').textContent = jobsData.length;
             document.getElementById('totalPartCost').textContent = totalPartCost.toFixed(2) + ' ريال';
             document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2) + ' ريال';

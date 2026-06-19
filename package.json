@@ -1,7 +1,7 @@
 {
   "name": "تجربة-النظام-للإتصالات",
   "version": "1.0.0",
-  "description": "عمر للاتصالات - A web application for managing phone inventory and sales",
+  "description": "الركبي للاتصالات - A web application for managing phone inventory and sales",
   "main": "index.html",
   "scripts": {
     "start": "python3 -m http.server 8000",
@@ -19,7 +19,7 @@
     "firebase",
     "demo"
   ],
-  "author": "عمر للاتصالات",
+  "author": "الركبي للاتصالات",
   "license": "MIT",
   "repository": {
     "type": "git",

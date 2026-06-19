@@ -3,19 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2c3e50">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="عمر">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>إنشاء عملية بيع جديدة — عمر للاتصالات</title>
+  <title>إنشاء عملية بيع جديدة — الركبي للاتصالات</title>
 
   <!-- نفس الخط/المكتبات المستخدمة في القالب -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link href="css/mobile.css" rel="stylesheet">
 
   <style>
     body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; padding-top: 70px; }
@@ -38,7 +31,7 @@
   <!-- شريط التنقل -->
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <span class="navbar-brand">عمر للاتصالات</span>
+      <span class="navbar-brand">الركبي للاتصالات</span>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -199,7 +192,7 @@
                       </div>
                     </div>
                     <div class="col-md-6 text-end">
-                      <button type="button" class="btn btn-success btn-lg" id="complete_sale_btn" disabled>
+                      <button type="button" class="btn btn-success btn-lg" onclick="completeSale()" id="complete_sale_btn" disabled>
                         <i class="fas fa-check"></i> إتمام عملية البيع
                       </button>
                     </div>
@@ -221,9 +214,9 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
   <!-- Firebase Configuration -->
-  <script type="module" src="js/firebase-config-cdn.js"></script>
-  <script type="module" src="js/firebase-database-cdn.js"></script>
-  <script type="module" src="js/firebase-storage-manager.js"></script>
+  <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-storage-manager.js?v=20260619-firestore-phone-save-v4"></script>
   
   <!-- Arabic Numbers Support -->
   <script src="js/arabic-numbers.js"></script>
@@ -236,7 +229,6 @@
     let accessoryCategories = [];
     let sales = [];
     let cart = [];
-    let isProcessing = false; // ✅ حماية من التنفيذ المتكرر
 
     // ملاحظة: نتوقع أن window.storage يوفّر الدوال التالية عندما تكون Firebase متاحة:
     // getPhones(), getAccessories(), getAccessoryCategories(), getSales()
@@ -280,18 +272,6 @@
       setupArabicNumberSupport();
       loadWarrantyOptions();
       loadProducts(); // أول تحميل
-      
-      // ✅ إضافة event listener للزر مع حماية من التكرار
-      const completeBtn = document.getElementById('complete_sale_btn');
-      if (completeBtn) {
-        completeBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!isProcessing && cart.length > 0) {
-            completeSale();
-          }
-        });
-      }
     });
   
     // ====== تحميل البيانات ======
@@ -899,48 +879,8 @@
 
     // ====== إتمام عملية البيع (يحفظ في Firebase إن توفرت) ======
     async function completeSale() {
-      // ✅ حماية قوية من التنفيذ المتكرر - فحص أولي فوراً (قبل أي شيء)
-      if (isProcessing) {
-        console.log('⏳ العملية قيد التنفيذ، يرجى الانتظار...');
-        return;
-      }
-
-      // ✅ تعطيل فوراً قبل أي فحص آخر
-      isProcessing = true;
-
-      if (cart.length === 0) { 
-        isProcessing = false; // إعادة التعيين إذا كانت السلة فارغة
-        alert('السلة فارغة'); 
-        return; 
-      }
-      const completeBtn = document.getElementById('complete_sale_btn');
-      if (!completeBtn) {
-        console.error('❌ زر إتمام البيع غير موجود');
-        isProcessing = false;
-        return;
-      }
-      
-      // ✅ تعطيل الزر فوراً قبل أي عملية أخرى
-      const originalBtnText = completeBtn.innerHTML;
-      completeBtn.disabled = true;
-      completeBtn.style.pointerEvents = 'none'; // ✅ منع أي تفاعل مع الزر
-      completeBtn.style.opacity = '0.6'; // ✅ إظهار أنه معطل
-      completeBtn.style.cursor = 'not-allowed'; // ✅ تغيير شكل المؤشر
-      completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
-      
-      // ✅ حماية إضافية: إزالة event listener مؤقتاً
-      const tempHandler = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        return false;
-      };
-      completeBtn.addEventListener('click', tempHandler, true);
-      
-      // ✅ حفظ المرجع للاستخدام في catch
-      const btnRef = { completeBtn, originalBtnText, tempHandler };
+      if (cart.length === 0) { alert('السلة فارغة'); return; }
   
-      try {
       const total = cart.reduce((s, it) => s + it.totalPrice, 0);
       const saleNumber = 'SALE-' + Date.now().toString().slice(-6);
       const totalProfit = cart.reduce((s, it) => s + (it.totalProfit || 0), 0);
@@ -964,6 +904,7 @@
         date_added: new Date().toISOString()
       };
   
+      try {
         // تقليل مخزون الأكسسوارات المباعة
         await updateAccessoryStock();
 
@@ -985,12 +926,6 @@
       updateCartDisplay();
         document.getElementById('customerForm')?.reset?.();
         document.getElementById('warranty_input').value = '';
-    
-        // ✅ تنظيف الحماية قبل الانتقال
-        isProcessing = false;
-        if (btnRef.completeBtn) {
-          btnRef.completeBtn.removeEventListener('click', btnRef.tempHandler, true);
-        }
   
         setTimeout(() => {
           window.location.href = `view_sale.html?id=${saleData.id}`;
@@ -998,18 +933,6 @@
       } catch (err) {
         console.error('❌ حفظ البيع:', err);
         alert('حدث خطأ في حفظ عملية البيع. حاول مرة أخرى.');
-        
-        // ✅ إعادة تفعيل الزر في حالة الخطأ
-        isProcessing = false;
-        if (btnRef.completeBtn) {
-          btnRef.completeBtn.disabled = false;
-          btnRef.completeBtn.style.pointerEvents = 'auto'; // ✅ إعادة تفعيل التفاعل
-          btnRef.completeBtn.style.opacity = '1'; // ✅ إعادة الشفافية
-          btnRef.completeBtn.style.cursor = 'pointer'; // ✅ إعادة شكل المؤشر
-          btnRef.completeBtn.innerHTML = btnRef.originalBtnText;
-          // ✅ إزالة الحماية المؤقتة
-          btnRef.completeBtn.removeEventListener('click', btnRef.tempHandler, true);
-        }
       }
     }
 

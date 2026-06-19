@@ -1,6 +1,6 @@
 /**
  * Phone Management Module
- * عمر للاتصالات - Phone Store Management System
+ * الركبي للاتصالات - Phone Store Management System
  */
 
 class PhoneManager {

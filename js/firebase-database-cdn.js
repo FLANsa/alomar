@@ -10,6 +10,7 @@ import {
   query,
   where,
   orderBy,
+  limit as firestoreLimit,
   onSnapshot,
   serverTimestamp,
   runTransaction
@@ -138,9 +139,33 @@ class FirebaseDatabase {
     return String(value).padStart(6, '0');
   }
 
-  async getNextPhoneNumber() {
+  async getHighestPhoneNumberFromFirestore() {
+    try {
+      const snapshot = await getDocs(
+        query(this.collectionRef('phones'), orderBy('phone_number', 'desc'), firestoreLimit(50))
+      );
+      const maxFromOrderedQuery = this.getMaxPhoneNumber(this.toArray(snapshot));
+      if (maxFromOrderedQuery > 0) {
+        return maxFromOrderedQuery;
+      }
+    } catch (error) {
+      console.warn('⚠️ Ordered phone_number lookup failed; falling back to a full phones scan.', error);
+    }
+
     const phones = await this.getPhones();
-    const nextFromExistingPhones = this.getMaxPhoneNumber(phones) + 1;
+    return this.getMaxPhoneNumber(phones);
+  }
+
+  async getNextPhoneNumber() {
+    let highestExistingPhoneNumber = 0;
+    let highestLookupError = null;
+
+    try {
+      highestExistingPhoneNumber = await this.getHighestPhoneNumberFromFirestore();
+    } catch (error) {
+      highestLookupError = error;
+      console.warn('⚠️ Could not read the highest phone_number from phones collection.', error);
+    }
 
     try {
       const counterRef = this.docRef('counters', 'phoneNumber');
@@ -154,7 +179,9 @@ class FirebaseDatabase {
               0
             )
           : 0;
-        const next = Math.max(counterValue + 1, nextFromExistingPhones);
+        const next = highestExistingPhoneNumber > 0
+          ? highestExistingPhoneNumber + 1
+          : counterValue + 1;
         transaction.set(counterRef, {
           lastPhoneNumber: next,
           updatedAt: serverTimestamp()
@@ -166,7 +193,10 @@ class FirebaseDatabase {
     } catch (error) {
       const reason = this.isQuotaError(error) ? 'quota/resource-exhausted' : 'counter update failed';
       console.warn(`⚠️ Barcode counter unavailable (${reason}); using next number from phones collection.`, error);
-      return this.formatPhoneNumber(nextFromExistingPhones);
+      if (highestExistingPhoneNumber > 0 || !highestLookupError) {
+        return this.formatPhoneNumber(highestExistingPhoneNumber + 1);
+      }
+      throw highestLookupError;
     }
   }
 
@@ -196,6 +226,7 @@ class FirebaseDatabase {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+    console.log('✅ Phone saved to Firestore phones collection:', docRef.id, 'phone_number:', phoneNumber);
     return docRef.id;
   }
 

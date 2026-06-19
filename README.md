@@ -1,6 +1,4 @@
-# عمر للاتصالات - نظام إدارة متجر الجوالات
-
-# Omar Telecom - Phone Store Management System
+# Aldhahbi - نظام إدارة متجر الجوالات
 
 نظام متكامل لإدارة متجر الهواتف المحمولة الجديدة والمستعملة باللغة العربية.
 
@@ -37,12 +35,12 @@
 2. **اضغط على "New +" ثم "Static Site"**
 3. **اتصل بـ GitHub:**
    - اختر "Build and deploy from a Git repository"
-   - اختر مستودع `omar-telecom`
+   - اختر مستودع `aldhahbi`
    - اختر الفرع `main`
 
 4. **إعدادات النشر:**
    ```
-   Name: omar-telecom
+   Name: aldhahbi
    Branch: main
    Root Directory: ./
    Build Command: (اتركه فارغ)
@@ -58,7 +56,7 @@
 ```yaml
 services:
   - type: static
-    name: omar-telecom
+    name: aldhahbi
     buildCommand: ""
     staticPublishPath: ./
     envVars:
@@ -77,7 +75,7 @@ services:
 
 ### 1. إنشاء مشروع Firebase
 - اذهب إلى [Firebase Console](https://console.firebase.google.com)
-- أنشئ مشروع جديد باسم `omar-telecom-682ac`
+- أنشئ مشروع جديد باسم `aldhahbi`
 
 ### 2. تفعيل الخدمات المطلوبة
 - **Firestore Database** - قاعدة البيانات
@@ -144,8 +142,8 @@ services:
 
 ```bash
 # استنساخ المشروع
-git clone https://github.com/FLANsa/omar-telecom.git
-cd omar-telecom
+git clone https://github.com/FLANsa/aldhahbi.git
+cd aldhahbi
 
 # تشغيل الخادم المحلي
 python3 -m http.server 8000
@@ -157,8 +155,8 @@ npx http-server -p 8000
 ## 📞 الدعم
 
 للدعم التقني أو الاستفسارات:
-- **GitHub Issues**: [إنشاء مشكلة](https://github.com/FLANsa/omar-telecom/issues)
-- **Email**: support@omar-telecom.com
+- **GitHub Issues**: [إنشاء مشكلة](https://github.com/FLANsa/aldhahbi/issues)
+- **Email**: support@blackfingerprint.com
 
 ## 📄 الترخيص
 
@@ -166,4 +164,4 @@ npx http-server -p 8000
 
 ---
 
-**Omar Telecom** - رؤيتنا هي تقديم أفضل حلول إدارة متاجر الجوالات في المملكة العربية السعودية.
+**Aldhahbi** - رؤيتنا هي تقديم أفضل حلول إدارة متاجر الجوالات في المملكة العربية السعودية.

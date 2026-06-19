@@ -3,25 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="عمر">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <title>إدارة أعمال الصيانة — عمر للاتصالات</title>
+    <title>إدارة أعمال الصيانة — الركبي للاتصالات</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="css/mobile.css" rel="stylesheet">
     <!-- Google Fonts - Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <!-- Firebase Scripts -->
-    <script type="module" src="js/firebase-config-cdn.js"></script>
-    <script type="module" src="js/firebase-database-cdn.js"></script>
+    <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+    <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
     
     <!-- Arabic Numbers Support -->
     <script src="js/arabic-numbers.js"></script>
@@ -117,7 +110,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <span class="navbar-brand">عمر للاتصالات</span>
+            <span class="navbar-brand">الركبي للاتصالات</span>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -1049,46 +1042,21 @@
             const job = jobsData.find(j => j.id === currentEditId);
             if (!job) return;
 
-            // ✅ حساب إجمالي تكلفة القطع بشكل صحيح
+            // حساب إجمالي تكلفة القطع
             let totalPartCost = 0;
             if (job.parts && Array.isArray(job.parts) && job.parts.length > 0) {
-                // البنية الجديدة: حساب من مصفوفة parts
-                totalPartCost = job.parts.reduce((sum, part) => {
-                    const cost = Number(part.partCost) || 0;
-                    console.log('🔧 جزء:', part.partName, 'تكلفة:', cost);
-                    return sum + cost;
-                }, 0);
-                console.log('✅ إجمالي تكلفة القطع من parts[]:', totalPartCost);
-            } else if (job.totalPartCost !== undefined && job.totalPartCost !== null) {
-                // استخدام القيمة المحفوظة مباشرة
-                totalPartCost = Number(job.totalPartCost) || 0;
-                console.log('✅ إجمالي تكلفة القطع من totalPartCost:', totalPartCost);
-            } else if (job.partCost !== undefined && job.partCost !== null) {
-                // البنية القديمة: partCost مباشر
+                totalPartCost = job.parts.reduce((sum, part) => sum + (Number(part.partCost) || 0), 0);
+            } else if (job.partCost !== undefined) {
                 totalPartCost = Number(job.partCost) || 0;
-                console.log('✅ إجمالي تكلفة القطع من partCost:', totalPartCost);
-            } else {
-                console.warn('⚠️ لا توجد بيانات تكلفة القطع، سيتم استخدام 0');
+            } else if (job.totalPartCost !== undefined) {
+                totalPartCost = Number(job.totalPartCost) || 0;
             }
 
-            // ✅ التحقق من البيانات الأساسية (القطع غير إلزامية، لكن المبلغ والفني إلزاميان)
-            if (!job.amountCharged || !job.techId) {
-                showAlert('error', 'يرجى التأكد من ملء الفني والمبلغ المحصل قبل إتمام العملية');
+            // تأكيد توفر البيانات الأساسية
+            if (!totalPartCost || !job.amountCharged || !job.techId) {
+                showAlert('error', 'يرجى التأكد من ملء جميع البيانات المطلوبة قبل إتمام العملية');
                 return;
             }
-
-            const amountCharged = Number(job.amountCharged) || 0;
-            if (amountCharged <= 0) {
-                showAlert('error', 'المبلغ المحصل يجب أن يكون أكبر من صفر');
-                return;
-            }
-
-            // ✅ تسجيل القيم للتأكد من الحساب
-            console.log('💰 حساب الربح عند الإتمام:', {
-                totalPartCost,
-                amountCharged,
-                parts: job.parts?.length || 0
-            });
 
             // استخدم النسبة المخزّنة إن وجدت، وإلا المختارة حالياً، وإلا من بيانات الفني، وإلا 0%
             const selectedTech = techniciansData.find(t => t.id === job.techId);
@@ -1097,15 +1065,8 @@
                                 (selectedTech && typeof selectedTech.defaultCommissionPercent === 'number') ? 
                                 selectedTech.defaultCommissionPercent : 0);
 
-            // ✅ احسب القيم المُشتقة نهائياً (profit = amountCharged - totalPartCost)
-            const { profit, techCommission, shopProfit } = computeDerived(totalPartCost, amountCharged, techPercent);
-            
-            console.log('💰 النتيجة المحسوبة:', {
-                profit,
-                techCommission,
-                shopProfit,
-                techPercent: techPercent * 100 + '%'
-            });
+            // ✅ احسب القيم المُشتقة نهائياً
+            const { profit, techCommission, shopProfit } = computeDerived(totalPartCost, job.amountCharged, techPercent);
 
             const confirmMessage = `هل أنت متأكد من إتمام هذه العملية؟
             
@@ -1121,13 +1082,10 @@
                     status: 'done',
                     completedAt: new Date(),
                     // ✅ ثبّت القيم عند الإتمام
-                    totalPartCost, // ✅ إرسال totalPartCost للتأكد من الحساب الصحيح
                     profit,
                     techCommission,
                     shopProfit,
-                    techPercent,
-                    // ✅ التأكد من حفظ parts إذا كانت موجودة
-                    parts: job.parts || []
+                    techPercent
                 };
 
                 await window.firebaseDatabase.updateMaintenanceJob(currentEditId, jobData);

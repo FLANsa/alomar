@@ -3,18 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2c3e50">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="عمر">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>إضافة هاتف جديد — عمر للاتصالات</title>
+  <title>إضافة هاتف جديد — الركبي للاتصالات</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <link href="css/mobile.css" rel="stylesheet">
 
   <style>
     body { font-family: 'Cairo', sans-serif; background-color: #f8f9fa; padding-top: 70px; }
@@ -29,7 +22,7 @@
 
   <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-      <span class="navbar-brand">عمر للاتصالات</span>
+      <span class="navbar-brand">الركبي للاتصالات</span>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -183,7 +176,7 @@
               </div>
 
               <div class="text-center">
-                <button type="submit" class="btn btn-primary" id="add_phone_btn">إضافة الهاتف الجديد</button>
+                <button type="submit" class="btn btn-primary">إضافة الهاتف الجديد</button>
                 <a href="dashboard.html" class="btn btn-secondary">عودة للوحة التحكم</a>
               </div>
             </form>
@@ -198,9 +191,9 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   
   <!-- Firebase -->
-  <script type="module" src="js/firebase-config-cdn.js?v=20260619-phone-quota"></script>
-  <script type="module" src="js/firebase-database-cdn.js?v=20260619-phone-quota"></script>
-  <script type="module" src="js/firebase-storage-manager.js?v=20260619-phone-quota"></script>
+  <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-storage-manager.js?v=20260619-firestore-phone-save-v4"></script>
 
   <script>
 
@@ -372,44 +365,91 @@
       }catch(e){ console.error(e); alert('❌ حدث خطأ في الحذف.'); }
     }
 
-    /** توليد رقم باركود محلي (للوضع غير المتصل أو عند استخدام localStorage فقط). */
     function generatePhoneNumberLocal(){
       let last = localStorage.getItem('lastDeviceNumber')||'0';
       const next = (parseInt(last,10)+1); localStorage.setItem('lastDeviceNumber', String(next));
       return String(next).padStart(6,'0');
     }
 
-    /** الحصول على الرقم التالي الفريد: من Firebase إن وُجد، وإلا من localStorage. */
+    function isFirebaseReadyForPhones(){
+      return !!(
+        window.firebaseDatabase &&
+        typeof window.firebaseDatabase.addPhone === 'function' &&
+        (window.firebaseDB || window.firebaseDatabase.db)
+      );
+    }
+
     async function getNextPhoneNumberForAdd(){
-      if (window.firebaseDatabase && window.storage && window.storage.isFirebaseAvailable) {
-        return await window.firebaseDatabase.getNextPhoneNumber();
+      if (window.firebaseDatabase && typeof window.firebaseDatabase.getNextPhoneNumber === 'function') {
+        try {
+          return await window.firebaseDatabase.getNextPhoneNumber();
+        } catch (error) {
+          console.error('❌ تعذر توليد رقم الباركود من Firestore:', error);
+          if (isFirebaseReadyForPhones()) {
+            throw error;
+          }
+        }
       }
       return generatePhoneNumberLocal();
     }
 
-    let isProcessing = false; // ✅ حماية من التنفيذ المتكرر
+    function savePhoneLocalLastResort(phoneData){
+      console.warn('⚠️ Firebase غير متاح، حفظ الهاتف في localStorage كحل أخير فقط.');
+      const arr = JSON.parse(localStorage.getItem('phones')||'[]');
+      phoneData.id = Date.now().toString();
+      arr.push(phoneData);
+      localStorage.setItem('phones', JSON.stringify(arr));
+      return phoneData.id;
+    }
+
+    async function addPhoneFirestoreFirst(phoneData){
+      if (isFirebaseReadyForPhones()) {
+        const id = await window.firebaseDatabase.addPhone(phoneData);
+        console.log('✅ Firestore phones add verified:', { id, phone_number: phoneData.phone_number });
+        return id;
+      }
+
+      if (
+        window.storage &&
+        typeof window.storage.refreshFirebaseAvailability === 'function' &&
+        window.storage.refreshFirebaseAvailability()
+      ) {
+        const id = await window.storage.addPhone(phoneData);
+        if (id) return id;
+        throw new Error('تعذر حفظ الهاتف في Firestore');
+      }
+
+      return savePhoneLocalLastResort(phoneData);
+    }
+
+    async function updatePhoneFirestoreFirst(phoneId, phoneData){
+      if (isFirebaseReadyForPhones() && typeof window.firebaseDatabase.updatePhone === 'function') {
+        await window.firebaseDatabase.updatePhone(phoneId, phoneData);
+        console.log('✅ Firestore phones update verified:', { id: phoneId, phone_number: phoneData.phone_number });
+        return true;
+      }
+
+      if (
+        window.storage &&
+        typeof window.storage.refreshFirebaseAvailability === 'function' &&
+        window.storage.refreshFirebaseAvailability()
+      ) {
+        const updated = await window.storage.updatePhone(phoneId, phoneData);
+        if (updated) return true;
+        throw new Error('تعذر تحديث الهاتف في Firestore');
+      }
+
+      const arr = JSON.parse(localStorage.getItem('phones')||'[]');
+      const index = arr.findIndex(p => p.id === phoneId || p.phone_number === phoneId);
+      if (index !== -1) {
+        arr[index] = { ...arr[index], ...phoneData };
+        localStorage.setItem('phones', JSON.stringify(arr));
+        return true;
+      }
+      return false;
+    }
 
     async function savePhoneToFirebase(){
-      // ✅ حماية فورية من التنفيذ المتكرر
-      if (isProcessing) {
-        console.log('⏳ العملية قيد التنفيذ، يرجى الانتظار...');
-        return false;
-      }
-      isProcessing = true;
-
-      // ✅ حفظ حالة الزر وإعداد حالة التحميل
-      const addBtn = document.getElementById('add_phone_btn');
-      let btnRef = null;
-      if (addBtn) {
-        const originalBtnText = addBtn.innerHTML;
-        addBtn.disabled = true;
-        addBtn.style.pointerEvents = 'none';
-        addBtn.style.opacity = '0.6';
-        addBtn.style.cursor = 'not-allowed';
-        addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...';
-        btnRef = { addBtn, originalBtnText };
-      }
-
       try{
         // Validate customer ID and phone number
         const customerId = document.getElementById('customer_id').value.trim();
@@ -418,28 +458,12 @@
         if (!customerId || customerId.length !== 10 || !/^[0-9]{10}$/.test(customerId)) {
           alert('رقم الهوية/الإقامة مطلوب ويجب أن يكون 10 أرقام');
           document.getElementById('customer_id').focus();
-          isProcessing = false;
-          if (btnRef && btnRef.addBtn) {
-            btnRef.addBtn.disabled = false;
-            btnRef.addBtn.style.pointerEvents = 'auto';
-            btnRef.addBtn.style.opacity = '1';
-            btnRef.addBtn.style.cursor = 'pointer';
-            btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-          }
           return false;
         }
         
         if (!customerPhone || customerPhone.length !== 10 || !/^[0-9]{10}$/.test(customerPhone)) {
           alert('رقم هاتف العميل مطلوب ويجب أن يكون 10 أرقام');
           document.getElementById('customer_phone').focus();
-          isProcessing = false;
-          if (btnRef && btnRef.addBtn) {
-            btnRef.addBtn.disabled = false;
-            btnRef.addBtn.style.pointerEvents = 'auto';
-            btnRef.addBtn.style.opacity = '1';
-            btnRef.addBtn.style.cursor = 'pointer';
-            btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-          }
           return false;
         }
 
@@ -472,39 +496,15 @@
         if(!phoneData.brand || !phoneData.model || !phoneData.serial_number){ alert('يرجى ملء جميع الحقول المطلوبة'); return false; }
         if(phoneData.purchase_price<=0 || phoneData.selling_price<=0){ alert('يرجى إدخال أسعار صحيحة'); return false; }
 
-        // handoff سريع للملصق
-        localStorage.setItem('lastAddedPhone', JSON.stringify(phoneData));
-
         let savedOK=false;
         
         // التحقق من وجود معرف التعديل
         if (window.editingPhoneId) {
           console.log('🔄 تحديث الهاتف:', window.editingPhoneId);
           phoneData.id = window.editingPhoneId;
-          
-          if(window.storage && window.storage.isFirebaseAvailable){
-            // تحديث في Firebase
-            savedOK = await window.storage.updatePhone(window.editingPhoneId, phoneData);
-          } else {
-            // تحديث في localStorage
-            const arr = JSON.parse(localStorage.getItem('phones')||'[]');
-            const index = arr.findIndex(p => p.id === window.editingPhoneId || p.phone_number === window.editingPhoneId);
-            if (index !== -1) {
-              arr[index] = { ...arr[index], ...phoneData };
-              localStorage.setItem('phones', JSON.stringify(arr));
-              savedOK = true;
-            }
-          }
+          savedOK = await updatePhoneFirestoreFirst(window.editingPhoneId, phoneData);
           
           if(savedOK){
-            isProcessing = false;
-            if (btnRef && btnRef.addBtn) {
-              btnRef.addBtn.disabled = false;
-              btnRef.addBtn.style.pointerEvents = 'auto';
-              btnRef.addBtn.style.opacity = '1';
-              btnRef.addBtn.style.cursor = 'pointer';
-              btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-            }
             showAlert('success', 'تم تحديث الهاتف بنجاح!');
             // إعادة توجيه إلى صفحة البحث
             setTimeout(() => {
@@ -514,54 +514,19 @@
           }
         } else {
           // إضافة هاتف جديد
-          if(window.storage && window.storage.isFirebaseAvailable){
-            const id = await window.storage.addPhone(phoneData);
-            savedOK = !!id;
-          }else{
-            const arr = JSON.parse(localStorage.getItem('phones')||'[]'); 
-            phoneData.id=Date.now().toString(); 
-            arr.push(phoneData);
-            localStorage.setItem('phones', JSON.stringify(arr)); 
-            savedOK=true;
-          }
+          const id = await addPhoneFirestoreFirst(phoneData);
+          savedOK = !!id;
           
           if(savedOK){
-            isProcessing = false;
-            if (btnRef && btnRef.addBtn) {
-              btnRef.addBtn.disabled = false;
-              btnRef.addBtn.style.pointerEvents = 'auto';
-              btnRef.addBtn.style.opacity = '1';
-              btnRef.addBtn.style.cursor = 'pointer';
-              btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-            }
+            localStorage.setItem('lastAddedPhone', JSON.stringify(phoneData));
             const shouldPrint = confirm('✅ تم إضافة الهاتف!\n\nهل تريد طباعة الباركود؟');
             if(shouldPrint){ window.location.href = `print_barcode.html?phone_number=${encodeURIComponent(phoneData.phone_number)}`; }
             return true;
           }
         }
-        isProcessing = false;
-        if (btnRef && btnRef.addBtn) {
-          btnRef.addBtn.disabled = false;
-          btnRef.addBtn.style.pointerEvents = 'auto';
-          btnRef.addBtn.style.opacity = '1';
-          btnRef.addBtn.style.cursor = 'pointer';
-          btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-        }
         alert('❌ تعذّر الحفظ'); return false;
 
-      }catch(err){ 
-        console.error(err); 
-        isProcessing = false;
-        if (btnRef && btnRef.addBtn) {
-          btnRef.addBtn.disabled = false;
-          btnRef.addBtn.style.pointerEvents = 'auto';
-          btnRef.addBtn.style.opacity = '1';
-          btnRef.addBtn.style.cursor = 'pointer';
-          btnRef.addBtn.innerHTML = btnRef.originalBtnText;
-        }
-        alert('❌ حدث خطأ في حفظ الهاتف.'); 
-        return false; 
-      }
+      }catch(err){ console.error(err); alert('❌ حدث خطأ في حفظ الهاتف.'); return false; }
     }
 
     // Add input validation for customer ID and phone
@@ -628,7 +593,7 @@
           document.getElementById('customer_phone').value = phone.customer_phone || '';
           
           // تحديث عنوان الصفحة
-          document.title = 'تعديل هاتف جديد — عمر للاتصالات';
+          document.title = 'تعديل هاتف جديد — الركبي للاتصالات';
           document.querySelector('h2').textContent = 'تعديل هاتف جديد';
           
           // حفظ معرف الهاتف للتعديل
@@ -705,14 +670,7 @@
       }
       
       const form = document.querySelector('form');
-      form.addEventListener('submit', async (e)=>{ 
-        e.preventDefault(); 
-        e.stopPropagation();
-        if (!isProcessing && await savePhoneToFirebase()){ 
-          form.reset(); 
-          await populateBrandsFromFirebase(); 
-        } 
-      });
+      form.addEventListener('submit', async (e)=>{ e.preventDefault(); if(await savePhoneToFirebase()){ form.reset(); await populateBrandsFromFirebase(); } });
     });
 
     // ===== إضافة لون مخصص =====

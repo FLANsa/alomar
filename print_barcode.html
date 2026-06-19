@@ -3,26 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2c3e50">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="عمر">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <title>طباعة الباركود — عمر للاتصالات</title>
+  <title>طباعة الباركود — الركبي للاتصالات</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
-  <link href="css/mobile.css" rel="stylesheet">
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
   <!-- Firebase so we can read the phone back -->
-  <script type="module" src="js/firebase-config-cdn.js"></script>
-  <script type="module" src="js/firebase-database-cdn.js"></script>
-  <script type="module" src="js/firebase-storage-manager.js"></script>
+  <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+  <script type="module" src="js/firebase-storage-manager.js?v=20260619-firestore-phone-save-v4"></script>
 
   <style>
     :root { --card-bg:#fff; --muted:#cfcfcf; }
@@ -65,7 +58,7 @@
       <div class="card-body">
         <div class="sticker-preview">
           <div id="sticker" class="sticker">
-            <div class="shop">عمر للاتصالات</div>
+            <div class="shop">الركبي للاتصالات</div>
             <div class="model-line" id="phone-model">جاري التحميل...</div>
             <div class="sticker-barcode"><canvas id="barcode-canvas"></canvas></div>
             <div class="rows">
@@ -251,10 +244,13 @@
       }
     }catch{}
 
-    // لا نولّد رقماً جديداً هنا لتجنب فجوات وتداخل مع أرقام الهواتف المسجلة.
-    // عرض رسالة توجيهية وملصق placeholder.
-    alert('لم يتم تحديد رقم جهاز.\n\nافتح صفحة الطباعة من صفحة الهاتف (إضافة هاتف أو البحث) أو أضِف رقم الجهاز في الرابط:\nprint_barcode.html?phone_number=XXXXXX');
-    fillSticker({ phone_number: '—', modelLine: '—', memory: '—', battery: '—' });
+    // Finally, generate a new label if nothing provided
+    const generated = (() => {
+      let last = localStorage.getItem('lastDeviceNumber')||'0';
+      const next = (parseInt(last,10)+1); localStorage.setItem('lastDeviceNumber', String(next));
+      return String(next).padStart(6,'0');
+    })();
+    fillSticker({ phone_number: generated, modelLine:'-', memory:'32GB', battery:'100' });
   }
 
   document.addEventListener('DOMContentLoaded', loadPhoneData);

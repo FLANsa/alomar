@@ -3,25 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="عمر">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <title>فاتورة الصيانة - عمر للاتصالات</title>
+    <title>فاتورة الصيانة - الركبي للاتصالات</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="css/mobile.css" rel="stylesheet">
     <!-- Google Fonts - Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <!-- Firebase Scripts -->
-    <script type="module" src="js/firebase-config-cdn.js"></script>
-    <script type="module" src="js/firebase-database-cdn.js"></script>
+    <script type="module" src="js/firebase-config-cdn.js?v=20260619-firestore-phone-save-v4"></script>
+    <script type="module" src="js/firebase-database-cdn.js?v=20260619-firestore-phone-save-v4"></script>
     
     <!-- Arabic Numbers Support -->
     <script src="js/arabic-numbers.js"></script>
@@ -317,8 +310,10 @@
             <div class="receipt-container">
                 <div class="receipt-header">
                     <div class="company-info">
-                        <h1>عمر للاتصالات</h1>
-                        <p>الجوال: ٠٥٣١١٠٠٧٢٥</p>
+                        <h1>الركبي للاتصالات</h1>
+                        <p>Ostora Al-Dhahabi</p>
+                        <p>الجوال: 0599254441</p>
+                        <p>السجل التجاري: 7034630488</p>
                         <p>العنوان: القصيم بريده الصفراء</p>
                         <p>اسواق النافوره</p>
                     </div>
@@ -372,7 +367,7 @@
                 </div>
 
                 <div class="receipt-footer">
-                    <p style="margin-top: 20px;">شكراً لثقتكم عمر للاتصالات</p>
+                    <p style="margin-top: 20px;">شكراً لثقتكم الركبي للاتصالات</p>
                 </div>
             </div>
         </div>
@@ -443,25 +438,28 @@
                 partsListEl.innerHTML = '';
                 
                 if (currentJob.parts && Array.isArray(currentJob.parts) && currentJob.parts.length > 0) {
-                        // الهيكل الجديد: عرض جميع القطع بدون إظهار اسم المندوب أو تكلفة القطعة
+                    // الهيكل الجديد: عرض جميع القطع
                     currentJob.parts.forEach((part, index) => {
                         const partDiv = document.createElement('div');
                         partDiv.style.margin = '8px 0';
                         partDiv.innerHTML = `
                             <p style="margin: 4px 0;">
                                 <strong>القطعة ${index + 1}:</strong> ${part.partName || 'غير محدد'}
+                                ${part.repName ? ` (مندوب: ${part.repName})` : ''}
+                                ${part.partCost ? ` - ${part.partCost.toFixed(2)} ريال` : ''}
                             </p>
                         `;
-                            partDiv.appendChild(document.createElement('hr'));
                         partsListEl.appendChild(partDiv);
                     });
                 } else if (currentJob.partName) {
-                        // الهيكل القديم: عرض القطعة الواحدة بدون إظهار اسم المندوب أو تكلفة القطعة
+                    // الهيكل القديم: عرض القطعة الواحدة
                     const partDiv = document.createElement('div');
                     partDiv.style.margin = '8px 0';
                     partDiv.innerHTML = `
                         <p style="margin: 4px 0;">
                             <strong>القطعة:</strong> ${currentJob.partName || 'غير محدد'}
+                            ${currentJob.repName ? ` (مندوب: ${currentJob.repName})` : ''}
+                            ${currentJob.partCost ? ` - ${currentJob.partCost.toFixed(2)} ريال` : ''}
                         </p>
                     `;
                     partsListEl.appendChild(partDiv);
@@ -732,24 +730,28 @@
                     partsListEl.innerHTML = '';
                     
                     if (currentJob.parts && Array.isArray(currentJob.parts) && currentJob.parts.length > 0) {
-                        // الهيكل الجديد: عرض جميع القطع بدون إظهار اسم المندوب أو تكلفة القطعة
+                        // الهيكل الجديد: عرض جميع القطع
                         currentJob.parts.forEach((part, index) => {
                             const partDiv = document.createElement('div');
                             partDiv.style.margin = '8px 0';
                             partDiv.innerHTML = `
                                 <p style="margin: 4px 0;">
                                     <strong>القطعة ${index + 1}:</strong> ${part.partName || 'غير محدد'}
+                                    ${part.repName ? ` (مندوب: ${part.repName})` : ''}
+                                    ${part.partCost ? ` - ${part.partCost.toFixed(2)} ريال` : ''}
                                 </p>
                             `;
                             partsListEl.appendChild(partDiv);
                         });
                     } else if (currentJob.partName) {
-                        // الهيكل القديم: عرض القطعة الواحدة بدون إظهار اسم المندوب أو تكلفة القطعة
+                        // الهيكل القديم: عرض القطعة الواحدة
                         const partDiv = document.createElement('div');
                         partDiv.style.margin = '8px 0';
                         partDiv.innerHTML = `
                             <p style="margin: 4px 0;">
                                 <strong>القطعة:</strong> ${currentJob.partName || 'غير محدد'}
+                                ${currentJob.repName ? ` (مندوب: ${currentJob.repName})` : ''}
+                                ${currentJob.partCost ? ` - ${currentJob.partCost.toFixed(2)} ريال` : ''}
                             </p>
                         `;
                         partsListEl.appendChild(partDiv);

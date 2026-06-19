@@ -33,14 +33,27 @@ const DEFAULT_ACCESSORY_CATEGORIES = [
 class FirebaseStorageManager {
   constructor() {
     this.firebaseDB = window.firebaseDatabase;
-    this.isFirebaseAvailable = !!(this.firebaseDB && this.firebaseDB.db);
+    this.isFirebaseAvailable = this.refreshFirebaseAvailability();
     
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('🔥 Firebase Storage Manager initialized with Firebase');
     } else {
       console.log('💾 Firebase not available, using LocalStorage fallback');
       this.initializeLocalStorage();
     }
+  }
+
+  refreshFirebaseAvailability() {
+    if (!this.firebaseDB && window.firebaseDatabase) {
+      this.firebaseDB = window.firebaseDatabase;
+    }
+
+    this.isFirebaseAvailable = !!(
+      this.firebaseDB &&
+      (this.firebaseDB.db || window.firebaseDB)
+    );
+
+    return this.isFirebaseAvailable;
   }
 
   /**
@@ -103,11 +116,10 @@ class FirebaseStorageManager {
   }
 
   /**
-    this._ensureFirebase();
    * Phone management
    */
   async getPhones() {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.getPhones();
       } catch (error) {
@@ -119,7 +131,7 @@ class FirebaseStorageManager {
   }
 
   async setPhones(phones) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('Firebase mode: phones are managed individually');
       return true;
     }
@@ -127,10 +139,11 @@ class FirebaseStorageManager {
   }
 
   async addPhone(phone) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         phone.date_added = new Date();
         const phoneId = await this.firebaseDB.addPhone(phone);
+        console.log('✅ Storage Manager: phone saved to Firestore ID:', phoneId);
         return phoneId;
       } catch (error) {
         console.error('Error adding phone to Firebase:', error);
@@ -139,7 +152,7 @@ class FirebaseStorageManager {
     }
     
     // LocalStorage fallback
-    const phones = this.getPhones();
+    const phones = await this.getPhones();
     phone.id = this.generateId();
     phone.date_added = new Date().toISOString();
     phones.push(phone);
@@ -147,7 +160,7 @@ class FirebaseStorageManager {
   }
 
   async updatePhone(phoneId, updatedPhone) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.updatePhone(phoneId, updatedPhone);
         return true;
@@ -158,7 +171,7 @@ class FirebaseStorageManager {
     }
     
     // LocalStorage fallback
-    const phones = this.getPhones();
+    const phones = await this.getPhones();
     const index = phones.findIndex(p => p.id === phoneId);
     if (index !== -1) {
       phones[index] = { ...phones[index], ...updatedPhone };
@@ -168,7 +181,7 @@ class FirebaseStorageManager {
   }
 
   async deletePhone(phoneId) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.deletePhone(phoneId);
         return true;
@@ -179,7 +192,7 @@ class FirebaseStorageManager {
     }
     
     // LocalStorage fallback
-    const phones = this.getPhones();
+    const phones = await this.getPhones();
     const filteredPhones = phones.filter(p => p.id !== phoneId);
     return this.setPhones(filteredPhones);
   }
@@ -198,7 +211,7 @@ class FirebaseStorageManager {
    * Accessory management
    */
   async getAccessories() {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.getAccessories();
       } catch (error) {
@@ -210,7 +223,7 @@ class FirebaseStorageManager {
   }
 
   async setAccessories(accessories) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('Firebase mode: accessories are managed individually');
       return true;
     }
@@ -220,7 +233,7 @@ class FirebaseStorageManager {
   async addAccessory(accessory) {
     console.log('📦 Storage Manager: محاولة إضافة أكسسوار:', accessory);
     
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         console.log('🔥 Storage Manager: Firebase متاح، إرسال إلى Firebase...');
         accessory.date_added = new Date();
@@ -245,7 +258,7 @@ class FirebaseStorageManager {
   }
 
   async updateAccessory(accessoryId, updatedAccessory) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.updateAccessory(accessoryId, updatedAccessory);
         return true;
@@ -266,7 +279,7 @@ class FirebaseStorageManager {
   }
 
   async deleteAccessory(accessoryId) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.deleteAccessory(accessoryId);
         return true;
@@ -286,7 +299,7 @@ class FirebaseStorageManager {
    * Sales management
    */
   async getSales() {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.getSales();
       } catch (error) {
@@ -298,7 +311,7 @@ class FirebaseStorageManager {
   }
 
   async setSales(sales) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('Firebase mode: sales are managed individually');
       return true;
     }
@@ -306,7 +319,7 @@ class FirebaseStorageManager {
   }
 
   async addSale(sale) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         sale.date_created = new Date();
         const saleId = await this.firebaseDB.addSale(sale);
@@ -326,7 +339,7 @@ class FirebaseStorageManager {
   }
 
   async updateSale(saleId, updatedSale) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.updateSale(saleId, updatedSale);
         return true;
@@ -347,7 +360,7 @@ class FirebaseStorageManager {
   }
 
   async deleteSale(saleId) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.deleteSale(saleId);
         return true;
@@ -364,7 +377,7 @@ class FirebaseStorageManager {
   }
 
   async getSaleById(saleId) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.getSale(saleId);
       } catch (error) {
@@ -381,7 +394,7 @@ class FirebaseStorageManager {
    * Phone Types management
    */
   async getPhoneTypes() {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         console.log('🔄 Storage Manager: تحميل أنواع الهواتف من Firebase...');
         const phoneTypes = await this.firebaseDB.getPhoneTypes();
@@ -408,7 +421,7 @@ class FirebaseStorageManager {
   }
 
   async setPhoneTypes(phoneTypes) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('Firebase mode: phone types are managed individually');
       return true;
     }
@@ -416,7 +429,7 @@ class FirebaseStorageManager {
   }
 
   async addPhoneType(brand, model) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.addPhoneType({ brand, model });
         return true;
@@ -439,7 +452,7 @@ class FirebaseStorageManager {
   }
 
   async deletePhoneType(brand, model) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.deletePhoneType(brand, model);
         return true;
@@ -465,7 +478,7 @@ class FirebaseStorageManager {
    * Accessory Categories management
    */
   async getAccessoryCategories() {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.getAccessoryCategories();
       } catch (error) {
@@ -477,7 +490,7 @@ class FirebaseStorageManager {
   }
 
   async setAccessoryCategories(categories) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       console.log('Firebase mode: accessory categories are managed individually');
       return true;
     }
@@ -485,7 +498,7 @@ class FirebaseStorageManager {
   }
 
   async addAccessoryCategory(category) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.addAccessoryCategory(category);
         return true;
@@ -506,7 +519,7 @@ class FirebaseStorageManager {
   }
 
   async deleteAccessoryCategory(categoryName) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         await this.firebaseDB.deleteAccessoryCategory(categoryName);
         return true;
@@ -545,7 +558,7 @@ class FirebaseStorageManager {
    * Search functionality
    */
   async searchPhones(searchTerm) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.searchPhones(searchTerm);
       } catch (error) {
@@ -576,7 +589,7 @@ class FirebaseStorageManager {
   }
 
   async searchAccessories(searchTerm) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       try {
         return await this.firebaseDB.searchAccessories(searchTerm);
       } catch (error) {
@@ -606,7 +619,7 @@ class FirebaseStorageManager {
    * Real-time listeners (Firebase only)
    */
   onPhonesChange(callback) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       return this.firebaseDB.onPhonesChange(callback);
     }
     console.log('Real-time listeners only available with Firebase');
@@ -614,7 +627,7 @@ class FirebaseStorageManager {
   }
 
   onAccessoriesChange(callback) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       return this.firebaseDB.onAccessoriesChange(callback);
     }
     console.log('Real-time listeners only available with Firebase');
@@ -622,7 +635,7 @@ class FirebaseStorageManager {
   }
 
   onSalesChange(callback) {
-    if (this.isFirebaseAvailable) {
+    if (this.refreshFirebaseAvailability()) {
       return this.firebaseDB.onSalesChange(callback);
     }
     console.log('Real-time listeners only available with Firebase');

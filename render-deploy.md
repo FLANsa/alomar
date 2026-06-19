@@ -1,12 +1,12 @@
-# Render Deployment Guide - Omar Telecom (عمر للاتصالات)
+# Render Deployment Guide - Phone Store Demo
 
-This guide explains how to deploy Omar Telecom to Render as a static site.
+This guide explains how to deploy the Phone Store Demo to Render as a static site.
 
 ## Prerequisites
 
-1. GitHub repository: `https://github.com/FLANsa/omar-telecom` (or your repo)
+1. GitHub repository: `https://github.com/FLANsa/phone-store-demo`
 2. Render account
-3. Firebase project: **Omar telecom** (`omar-telecom-682ac`) configured
+3. Firebase project configured
 
 ## Deployment Steps
 
@@ -15,12 +15,12 @@ This guide explains how to deploy Omar Telecom to Render as a static site.
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Click "New +" → "Static Site"
 3. Connect your GitHub account if not already connected
-4. Select repository: `omar-telecom` (or your repository name)
+4. Select repository: `FLANsa/phone-store-demo`
 
 ### 2. Configure Static Site Settings
 
 **Basic Settings:**
-- **Name**: `omar-telecom`
+- **Name**: `phone-store-demo`
 - **Branch**: `main`
 - **Root Directory**: Leave empty (uses repository root)
 - **Build Command**: Leave empty (no build required)
@@ -32,13 +32,17 @@ This guide explains how to deploy Omar Telecom to Render as a static site.
 
 ### 3. Environment Variables (Optional)
 
-The app reads Firebase config from `js/firebase-config-cdn.js` (project: **omar-telecom-682ac**). Environment variables are not used for Firebase in the current setup. If you later add build-time overrides, use your Omar telecom project values:
+If you need to override Firebase config via environment variables:
 
-- **Project ID**: `omar-telecom-682ac`
-- **Auth Domain**: `omar-telecom-682ac.firebaseapp.com`
-- **Storage Bucket**: `omar-telecom-682ac.firebasestorage.app`
-- **Project Number**: `357723312982`
-- **Web App ID**: `1:357723312982:web:a7fbe2c0e1f55f545ffcf7`
+```
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
+VITE_FIREBASE_PROJECT_ID=phone-store-demo
+VITE_FIREBASE_STORAGE_BUCKET=phone-store-demo.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
 
 ### 4. Deploy
 
@@ -58,7 +62,7 @@ The app reads Firebase config from `js/firebase-config-cdn.js` (project: **omar-
 ## File Structure for Static Deployment
 
 ```
-omar-telecom/
+phone-store-demo/
 ├── index.html              # Main entry point
 ├── login.html              # Login page
 ├── dashboard.html          # Dashboard
@@ -70,28 +74,27 @@ omar-telecom/
 ├── inventory_summary.html  # Inventory summary
 ├── search.html             # Search
 ├── js/                     # JavaScript files
-│   ├── firebase-config-cdn.js  # Firebase configuration (Omar telecom)
-│   ├── firebase-database-cdn.js
-│   ├── main.js             # Main application logic
-│   └── ...                 # Other JS files
-├── _redirects              # SPA routing rules
-├── render.yaml             # Render configuration
-└── package.json            # Dependencies
+│   ├── firebase-config.js  # Firebase configuration
+│   ├── main.js            # Main application logic
+│   └── ...                # Other JS files
+├── _redirects             # SPA routing rules
+├── render.yaml            # Render configuration
+└── package.json           # Dependencies
 ```
 
 ## Important Notes
 
-1. **Firebase Configuration**: The app is wired to Firebase project **omar-telecom-682ac** (Omar telecom). Config is in `js/firebase-config-cdn.js`.
-2. **CORS Settings**: Ensure Firebase allows your Render domain in the Firebase Console.
-3. **Authentication**: Configure Firebase Auth for your domain if using Firebase Auth.
-4. **Storage Rules**: Update Firebase Storage rules if needed.
+1. **Firebase Configuration**: Make sure your Firebase project is properly configured
+2. **CORS Settings**: Ensure Firebase allows your Render domain
+3. **Authentication**: Configure Firebase Auth for your domain
+4. **Storage Rules**: Update Firebase Storage rules if needed
 
 ## Troubleshooting
 
 ### Common Issues:
 
 1. **404 Errors**: Check `_redirects` file for SPA routing
-2. **Firebase Connection**: Verify `js/firebase-config-cdn.js` uses project `omar-telecom-682ac`
+2. **Firebase Connection**: Verify Firebase configuration
 3. **CORS Errors**: Update Firebase CORS settings
 4. **Build Failures**: Check build logs in Render dashboard
 
@@ -100,12 +103,12 @@ omar-telecom/
 1. Check Render build logs
 2. Verify all files are in the correct directory
 3. Test Firebase connection locally
-4. Check browser console for errors (and for the Firebase projectId check message)
+4. Check browser console for errors
 
 ## Post-Deployment
 
 1. Test all functionality
-2. Verify Firebase integration (omar-telecom-682ac)
+2. Verify Firebase integration
 3. Check mobile responsiveness
 4. Test user authentication
 5. Verify data persistence
@@ -113,11 +116,11 @@ omar-telecom/
 ## Monitoring
 
 - Use Render's built-in monitoring
-- Check Firebase Analytics (Omar telecom project)
+- Check Firebase Analytics
 - Monitor error logs
 - Track performance metrics
 
 ---
 
-**Deployment URL**: Will be provided by Render after successful deployment  
-**Firebase Project**: Omar telecom (`omar-telecom-682ac`)
+**Deployment URL**: Will be provided by Render after successful deployment
+**Repository**: https://github.com/FLANsa/phone-store-demo

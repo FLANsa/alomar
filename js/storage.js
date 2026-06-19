@@ -1,6 +1,6 @@
 /**
  * Local Storage Management
- * عمر للاتصالات - Phone Store Management System
+ * الركبي للاتصالات - Phone Store Management System
  */
 
 class StorageManager {
