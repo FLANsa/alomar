@@ -66,7 +66,7 @@
                 <div class="label">رقم الجهاز</div>
                 <div class="value" id="phone-number">جاري التحميل...</div>
               </div>
-              <div class="row2">
+              <div class="row2" id="battery-row">
                 <div class="label">نسبة البطارية</div>
                 <div class="value" id="battery-level">جاري التحميل...</div>
               </div>
@@ -150,13 +150,12 @@
     const model = phone?.model || phone?.phone_model || '';
     const modelLine = [brand, model].filter(Boolean).join(' ').trim() || '-';
     const memory = phone?.phone_memory || phone?.memory || phone?.storage || '-';
-    let battery = '-';
-    if (phone?.battery_level != null && phone.battery_level !== '') {
+    const isUsed = phone?.condition === 'used';
+    let battery = '';
+    if (isUsed && phone?.battery_level != null && phone.battery_level !== '') {
       battery = String(phone.battery_level);
-    } else if (phone?.age != null) {
+    } else if (isUsed && phone?.age != null && phone.age !== '') {
       battery = String(phone.age); // تم الحفظ من صفحة المستعمل كـ battery_level أيضاً
-    } else if (phone?.condition === 'new') {
-      battery = '100';
     }
     return { phone_number, modelLine, memory, battery };
   }
@@ -165,7 +164,15 @@
     document.getElementById('phone-number').textContent = phone_number || '-';
     document.getElementById('phone-model').textContent = modelLine || '-';
     document.getElementById('phone-memory').textContent = memory || '-';
-    document.getElementById('battery-level').textContent = battery || '-';
+    const batteryRow = document.getElementById('battery-row');
+    const batteryLevel = document.getElementById('battery-level');
+    if (battery) {
+      batteryRow.style.display = '';
+      batteryLevel.textContent = battery;
+    } else {
+      batteryRow.style.display = 'none';
+      batteryLevel.textContent = '';
+    }
     
     generateBarcode(phone_number || '-');
   }
@@ -250,7 +257,7 @@
       const next = (parseInt(last,10)+1); localStorage.setItem('lastDeviceNumber', String(next));
       return String(next).padStart(6,'0');
     })();
-    fillSticker({ phone_number: generated, modelLine:'-', memory:'32GB', battery:'100' });
+    fillSticker({ phone_number: generated, modelLine:'-', memory:'32GB', battery:'' });
   }
 
   document.addEventListener('DOMContentLoaded', loadPhoneData);
