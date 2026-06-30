@@ -1,6 +1,6 @@
 /**
  * Main Application Entry Point
- * العمر للاتصالات - Phone Store Management System
+ * طلال للاتصالات - Phone Store Management System
  */
 
 // Global application state

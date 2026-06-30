@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# العمر للاتصالات - نظام إدارة متجر الهواتف
+# طلال للاتصالات - نظام إدارة متجر الهواتف
 # Render Deployment Script
 
-echo "Starting العمر للاتصالات Phone Store Management System..."
+echo "Starting طلال للاتصالات Phone Store Management System..."
 
 # Check if Python is available
 if command -v python3 &> /dev/null; then

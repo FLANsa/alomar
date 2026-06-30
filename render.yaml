@@ -1,25 +1,25 @@
 services:
   - type: static
-    name: alomar
+    name: talal
     buildCommand: ""
     staticPublishPath: ./
     envVars:
       - key: NODE_ENV
         value: production
       - key: APP_NAME
-        value: العمر للاتصالات
+        value: طلال للاتصالات
       - key: APP_VERSION
         value: "2.0.0"
       - key: COMPANY_NAME
-        value: العمر للاتصالات
+        value: طلال للاتصالات
       - key: COMPANY_NAME_EN
-        value: Alomar Communications
+        value: Talal Communications
       - key: COMPANY_ADDRESS
         value: الرياض، المملكة العربية السعودية
       - key: COMPANY_PHONE
         value: "0599254441"
       - key: COMPANY_EMAIL
-        value: info@alomar.com
+        value: info@talal.com
       - key: VAT_RATE
         value: "0.15"
       - key: VAT_RATE_PERCENTAGE

@@ -105,7 +105,7 @@ Fields:
 
 ```bash
 # تأكد من أنك في مجلد المشروع
-cd /path/to/alomar
+cd /path/to/talal
 
 # سجل دخول إلى Firebase
 firebase login

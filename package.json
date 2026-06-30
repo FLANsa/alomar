@@ -1,7 +1,7 @@
 {
-  "name": "alomar-communications",
+  "name": "talal-communications",
   "version": "1.0.0",
-  "description": "العمر للاتصالات - A web application for managing phone inventory and sales",
+  "description": "طلال للاتصالات - A web application for managing phone inventory and sales",
   "main": "index.html",
   "scripts": {
     "start": "python3 -m http.server 8000",
@@ -19,7 +19,7 @@
     "firebase",
     "demo"
   ],
-  "author": "العمر للاتصالات",
+  "author": "طلال للاتصالات",
   "license": "MIT",
   "repository": {
     "type": "git",

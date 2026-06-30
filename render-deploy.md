@@ -20,7 +20,7 @@ This guide explains how to deploy the Phone Store Demo to Render as a static sit
 ### 2. Configure Static Site Settings
 
 **Basic Settings:**
-- **Name**: `alomar`
+- **Name**: `talal`
 - **Branch**: `main`
 - **Root Directory**: Leave empty (uses repository root)
 - **Build Command**: Leave empty (no build required)
@@ -62,7 +62,7 @@ VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
 ## File Structure for Static Deployment
 
 ```
-alomar/
+talal/
 ├── index.html              # Main entry point
 ├── login.html              # Login page
 ├── dashboard.html          # Dashboard

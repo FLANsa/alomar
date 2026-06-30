@@ -1,4 +1,4 @@
-# العمر للاتصالات - Environment Variables
+# طلال للاتصالات - Environment Variables
 # متغيرات البيئة لنظام إدارة متجر الجوالات
 
 # Firebase Configuration
@@ -12,16 +12,16 @@ FIREBASE_MEASUREMENT_ID=G-1EB4LL9V8J
 
 # Application Settings
 NODE_ENV=production
-APP_NAME=العمر للاتصالات
+APP_NAME=طلال للاتصالات
 APP_VERSION=2.0.0
 APP_DESCRIPTION=نظام إدارة متجر الجوالات
 
 # Company Information
-COMPANY_NAME=العمر للاتصالات
-COMPANY_NAME_EN=Alomar Communications
+COMPANY_NAME=طلال للاتصالات
+COMPANY_NAME_EN=Talal Communications
 COMPANY_ADDRESS=الرياض، المملكة العربية السعودية
 COMPANY_PHONE=0599254441
-COMPANY_EMAIL=info@alomar.com
+COMPANY_EMAIL=info@talal.com
 
 # Database Settings
 DATABASE_TYPE=firestore
@@ -31,9 +31,9 @@ DATABASE_COLLECTION_SALES=sales
 DATABASE_COLLECTION_PHONE_TYPES=phone_types
 
 # Security Settings
-JWT_SECRET=alomar-secret-key-2025
-SESSION_SECRET=alomar-session-secret
-ENCRYPTION_KEY=alomar-encryption-key
+JWT_SECRET=talal-secret-key-2025
+SESSION_SECRET=talal-session-secret
+ENCRYPTION_KEY=talal-encryption-key
 
 # VAT Settings (Saudi Arabia)
 VAT_RATE=0.15

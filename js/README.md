@@ -1,4 +1,4 @@
-# JavaScript Architecture - العمر للاتصالات
+# JavaScript Architecture - طلال للاتصالات
 
 ## 📁 File Structure
 
@@ -344,5 +344,5 @@ To extend the system:
 
 ---
 
-**العمر للاتصالات - Phone Store Management System**
+**طلال للاتصالات - Phone Store Management System**
 *Modular JavaScript Architecture v1.0*

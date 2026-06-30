@@ -1,6 +1,6 @@
 /**
  * Phone Management Module
- * العمر للاتصالات - Phone Store Management System
+ * طلال للاتصالات - Phone Store Management System
  */
 
 class PhoneManager {

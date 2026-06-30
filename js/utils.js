@@ -1,6 +1,6 @@
 /**
  * Utility Functions
- * العمر للاتصالات - Phone Store Management System
+ * طلال للاتصالات - Phone Store Management System
  */
 
 // VAT Calculation Functions

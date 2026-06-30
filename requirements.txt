@@ -1,4 +1,4 @@
-# العمر للاتصالات - نظام إدارة متجر الهواتف
+# طلال للاتصالات - نظام إدارة متجر الهواتف
 # Requirements for Render deployment
 
 # No external dependencies required for static site
