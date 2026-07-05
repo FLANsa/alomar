@@ -17,7 +17,7 @@ services:
       - key: COMPANY_ADDRESS
         value: الرياض، المملكة العربية السعودية
       - key: COMPANY_PHONE
-        value: "0599254441"
+        value: "0502318000"
       - key: COMPANY_EMAIL
         value: info@talal.com
       - key: VAT_RATE

@@ -20,7 +20,7 @@ APP_DESCRIPTION=نظام إدارة متجر الجوالات
 COMPANY_NAME=طلال للاتصالات
 COMPANY_NAME_EN=Talal Communications
 COMPANY_ADDRESS=الرياض، المملكة العربية السعودية
-COMPANY_PHONE=0599254441
+COMPANY_PHONE=0502318000
 COMPANY_EMAIL=info@talal.com
 
 # Database Settings

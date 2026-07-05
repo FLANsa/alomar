@@ -10,7 +10,7 @@ const CONFIG = {
         name: "طلال للاتصالات",
         vatNumber: "7034630488",
         address: "الرياض، المملكة العربية السعودية",
-        phone: "0599254441"
+        phone: "0502318000"
     },
     STORAGE_KEYS: {
         PHONES: 'phone_store_phones',
