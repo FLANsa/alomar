@@ -523,8 +523,7 @@
   async function loadSaleData(saleId) {
     try {
       if (window.storage && window.storage.isFirebaseAvailable) {
-        const sales = await window.storage.getSales();
-        currentSale = sales.find(sale => sale.id === saleId);
+        currentSale = await window.firebaseDatabase.getSale(saleId);
       } else {
         const sales = JSON.parse(localStorage.getItem('sales') || '[]');
         currentSale = sales.find(sale => sale.id === saleId);

@@ -12,6 +12,8 @@ This guide explains how to configure Firebase for the Phone Store Demo project.
 
 ### 1. Firestore Database
 
+**Seeding a fresh database:** default accessory categories are no longer seeded automatically on page load (it cost a full collection read per page and could create duplicates). On a brand-new database, open the browser console on any page and run `window.firebaseDatabase.initializeDefaultData()` once.
+
 **Enable Firestore:**
 1. Go to Firebase Console → Firestore Database
 2. Click "Create database"

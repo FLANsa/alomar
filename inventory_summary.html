@@ -546,8 +546,8 @@
     // تحديث ملخص المخزون
     await updateInventorySummary();
 
-    // تحديث البيانات كل 10 ثوانِ
-    setInterval(updateInventorySummary, 10000);
+    // تحديث البيانات كل 5 دقائق (كان كل 10 ثوانٍ ويستنزف حصة قراءات Firestore)
+    setInterval(updateInventorySummary, 5 * 60 * 1000);
   });
 </script>
 

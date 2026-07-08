@@ -802,10 +802,10 @@
     // تحديث لوحة التحكم
     await updateDashboard();
 
-    // تحديث البيانات كل 10 ثوانِ
+    // تحديث البيانات كل 5 دقائق (كان كل 10 ثوانٍ ويستنزف حصة قراءات Firestore)
     setInterval(async () => {
       await updateDashboard();
-    }, 10000);
+    }, 5 * 60 * 1000);
   });
 </script>
 

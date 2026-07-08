@@ -16,10 +16,106 @@ import {
   runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
+// Billed-read counter (documents fetched from Firestore this page load).
+// Inspect from the console via window.__fsReads.
+window.__fsReads = window.__fsReads || 0;
+
+async function countedGetDocs(queryOrRef) {
+  const snapshot = await getDocs(queryOrRef);
+  window.__fsReads += Math.max(snapshot.size, 1);
+  return snapshot;
+}
+
+async function countedGetDoc(ref) {
+  const snapshot = await getDoc(ref);
+  window.__fsReads += 1;
+  return snapshot;
+}
+
+// Full-collection cache: memory + sessionStorage so navigation between pages
+// doesn't refetch everything. Writes invalidate the collection's entry.
+const CACHE_PREFIX = 'fscache:';
+const CACHE_TTL_MS = {
+  phone_types: 10 * 60 * 1000,
+  accessory_categories: 10 * 60 * 1000,
+  reps: 5 * 60 * 1000,
+  technicians: 5 * 60 * 1000
+};
+const DEFAULT_CACHE_TTL_MS = 60 * 1000;
+const memCache = new Map();
+
+function cacheTtl(collectionName) {
+  return CACHE_TTL_MS[collectionName] || DEFAULT_CACHE_TTL_MS;
+}
+
+function readCache(collectionName) {
+  const ttl = cacheTtl(collectionName);
+  const memEntry = memCache.get(collectionName);
+  if (memEntry && Date.now() - memEntry.at < ttl) {
+    return memEntry.rows.slice();
+  }
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + collectionName);
+    if (raw) {
+      const entry = JSON.parse(raw);
+      if (Date.now() - entry.at < ttl) {
+        memCache.set(collectionName, entry);
+        return entry.rows.slice();
+      }
+    }
+  } catch (error) {
+    // Corrupted or oversized sessionStorage entry — treat as cache miss.
+  }
+  return null;
+}
+
+function writeCache(collectionName, rows) {
+  const entry = { at: Date.now(), rows };
+  memCache.set(collectionName, entry);
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + collectionName, JSON.stringify(entry));
+  } catch (error) {
+    // sessionStorage full — memory cache still applies.
+  }
+}
+
+function invalidateCache(collectionName) {
+  if (!collectionName) return;
+  memCache.delete(collectionName);
+  try {
+    sessionStorage.removeItem(CACHE_PREFIX + collectionName);
+  } catch (error) {
+    // ignore
+  }
+}
+
+// Write wrappers: any add/update/delete invalidates that collection's cache.
+async function trackedAddDoc(colRef, data) {
+  const ref = await addDoc(colRef, data);
+  invalidateCache(colRef.id);
+  return ref;
+}
+
+async function trackedUpdateDoc(ref, data) {
+  const result = await updateDoc(ref, data);
+  invalidateCache(ref.parent && ref.parent.id);
+  return result;
+}
+
+async function trackedDeleteDoc(ref) {
+  const result = await deleteDoc(ref);
+  invalidateCache(ref.parent && ref.parent.id);
+  return result;
+}
+
 class FirebaseDatabase {
   constructor() {
     this.db = window.firebaseDB || null;
     this.auth = window.firebaseAuth || null;
+  }
+
+  invalidateCache(collectionName) {
+    invalidateCache(collectionName);
   }
 
   getDb() {
@@ -47,8 +143,13 @@ class FirebaseDatabase {
   }
 
   async getCollectionRows(collectionName) {
-    const snapshot = await getDocs(this.collectionRef(collectionName));
-    return this.toArray(snapshot);
+    const cached = readCache(collectionName);
+    if (cached) return cached;
+
+    const snapshot = await countedGetDocs(this.collectionRef(collectionName));
+    const rows = this.toArray(snapshot);
+    writeCache(collectionName, rows);
+    return rows.slice();
   }
 
   toDate(value, endOfDay = false) {
@@ -92,7 +193,7 @@ class FirebaseDatabase {
     for (const value of values) {
       if (value === undefined || value === null || value === '') continue;
       const q = query(this.collectionRef(collectionName), where(field, '==', value));
-      const snapshot = await getDocs(q);
+      const snapshot = await countedGetDocs(q);
       if (!snapshot.empty) {
         return snapshot.docs[0];
       }
@@ -106,7 +207,7 @@ class FirebaseDatabase {
     }
 
     const directRef = this.docRef(collectionName, id);
-    const directSnap = await getDoc(directRef);
+    const directSnap = await countedGetDoc(directRef);
     if (directSnap.exists()) {
       return directRef;
     }
@@ -141,7 +242,7 @@ class FirebaseDatabase {
 
   async getHighestPhoneNumberFromFirestore() {
     try {
-      const snapshot = await getDocs(
+      const snapshot = await countedGetDocs(
         query(this.collectionRef('phones'), orderBy('phone_number', 'desc'), firestoreLimit(50))
       );
       const maxFromOrderedQuery = this.getMaxPhoneNumber(this.toArray(snapshot));
@@ -220,7 +321,7 @@ class FirebaseDatabase {
       throw new Error('رقم الباركود مستخدم مسبقاً');
     }
 
-    const docRef = await addDoc(this.collectionRef('phones'), {
+    const docRef = await trackedAddDoc(this.collectionRef('phones'), {
       ...phoneData,
       phone_number: phoneNumber,
       createdAt: serverTimestamp(),
@@ -253,7 +354,7 @@ class FirebaseDatabase {
     const ref = await this.resolveDocRef('phones', phoneId, [
       { field: 'phone_number', values: [String(phoneId), parseInt(String(phoneId), 10)] }
     ]);
-    await updateDoc(ref, { ...phoneData, updatedAt: serverTimestamp() });
+    await trackedUpdateDoc(ref, { ...phoneData, updatedAt: serverTimestamp() });
     return true;
   }
 
@@ -261,12 +362,12 @@ class FirebaseDatabase {
     const ref = await this.resolveDocRef('phones', phoneId, [
       { field: 'phone_number', values: [String(phoneId), parseInt(String(phoneId), 10)] }
     ]);
-    await deleteDoc(ref);
+    await trackedDeleteDoc(ref);
     return true;
   }
 
   async addAccessory(accessoryData) {
-    const docRef = await addDoc(this.collectionRef('accessories'), {
+    const docRef = await trackedAddDoc(this.collectionRef('accessories'), {
       ...accessoryData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -301,7 +402,7 @@ class FirebaseDatabase {
       { field: 'barcode', values: [String(accessoryId), parseInt(String(accessoryId), 10)] },
       { field: 'accessory_number', values: [String(accessoryId), parseInt(String(accessoryId), 10)] }
     ]);
-    await updateDoc(ref, { ...accessoryData, updatedAt: serverTimestamp() });
+    await trackedUpdateDoc(ref, { ...accessoryData, updatedAt: serverTimestamp() });
     return true;
   }
 
@@ -310,12 +411,12 @@ class FirebaseDatabase {
       { field: 'barcode', values: [String(accessoryId), parseInt(String(accessoryId), 10)] },
       { field: 'accessory_number', values: [String(accessoryId), parseInt(String(accessoryId), 10)] }
     ]);
-    await deleteDoc(ref);
+    await trackedDeleteDoc(ref);
     return true;
   }
 
   async addSale(saleData) {
-    const docRef = await addDoc(this.collectionRef('sales'), {
+    const docRef = await trackedAddDoc(this.collectionRef('sales'), {
       ...saleData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -324,11 +425,18 @@ class FirebaseDatabase {
   }
 
   async getSales() {
+    const cached = readCache('sales');
+    if (cached) {
+      cached.sort((a, b) => this.getTimestamp(b) - this.getTimestamp(a));
+      return cached;
+    }
+
     try {
-      const snapshot = await getDocs(query(this.collectionRef('sales'), orderBy('createdAt', 'desc')));
+      const snapshot = await countedGetDocs(query(this.collectionRef('sales'), orderBy('createdAt', 'desc')));
       const sales = this.toArray(snapshot);
+      writeCache('sales', sales);
       console.log('💰 Retrieved sales:', sales.length);
-      return sales;
+      return sales.slice();
     } catch (error) {
       console.warn('⚠️ Falling back to manual sales sorting:', error);
       const sales = await this.getCollectionRows('sales');
@@ -338,22 +446,22 @@ class FirebaseDatabase {
   }
 
   async getSale(saleId) {
-    const saleDoc = await getDoc(this.docRef('sales', saleId));
+    const saleDoc = await countedGetDoc(this.docRef('sales', saleId));
     return saleDoc.exists() ? { id: saleDoc.id, ...saleDoc.data() } : null;
   }
 
   async updateSale(saleId, saleData) {
-    await updateDoc(this.docRef('sales', saleId), { ...saleData, updatedAt: serverTimestamp() });
+    await trackedUpdateDoc(this.docRef('sales', saleId), { ...saleData, updatedAt: serverTimestamp() });
     return true;
   }
 
   async deleteSale(saleId) {
-    await deleteDoc(this.docRef('sales', saleId));
+    await trackedDeleteDoc(this.docRef('sales', saleId));
     return true;
   }
 
   async addAccessoryCategory(categoryData) {
-    const docRef = await addDoc(this.collectionRef('accessory_categories'), {
+    const docRef = await trackedAddDoc(this.collectionRef('accessory_categories'), {
       ...categoryData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -368,15 +476,15 @@ class FirebaseDatabase {
   }
 
   async deleteAccessoryCategory(categoryName) {
-    const snapshot = await getDocs(
+    const snapshot = await countedGetDocs(
       query(this.collectionRef('accessory_categories'), where('arabic_name', '==', categoryName))
     );
-    await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+    await Promise.all(snapshot.docs.map((item) => trackedDeleteDoc(item.ref)));
     return true;
   }
 
   async addPhoneType(phoneTypeData) {
-    const docRef = await addDoc(this.collectionRef('phone_types'), {
+    const docRef = await trackedAddDoc(this.collectionRef('phone_types'), {
       ...phoneTypeData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -391,10 +499,10 @@ class FirebaseDatabase {
   }
 
   async deletePhoneType(brand, model) {
-    const snapshot = await getDocs(
+    const snapshot = await countedGetDocs(
       query(this.collectionRef('phone_types'), where('brand', '==', brand), where('model', '==', model))
     );
-    await Promise.all(snapshot.docs.map((item) => deleteDoc(item.ref)));
+    await Promise.all(snapshot.docs.map((item) => trackedDeleteDoc(item.ref)));
     return true;
   }
 
@@ -439,7 +547,7 @@ class FirebaseDatabase {
   }
 
   async addRep(repData) {
-    const docRef = await addDoc(this.collectionRef('reps'), {
+    const docRef = await trackedAddDoc(this.collectionRef('reps'), {
       ...repData,
       active: repData.active !== false,
       createdAt: serverTimestamp(),
@@ -455,17 +563,17 @@ class FirebaseDatabase {
   }
 
   async updateRep(repId, repData) {
-    await updateDoc(this.docRef('reps', repId), { ...repData, updatedAt: serverTimestamp() });
+    await trackedUpdateDoc(this.docRef('reps', repId), { ...repData, updatedAt: serverTimestamp() });
     return true;
   }
 
   async deleteRep(repId) {
-    await deleteDoc(this.docRef('reps', repId));
+    await trackedDeleteDoc(this.docRef('reps', repId));
     return true;
   }
 
   async addTechnician(techData) {
-    const docRef = await addDoc(this.collectionRef('technicians'), {
+    const docRef = await trackedAddDoc(this.collectionRef('technicians'), {
       ...techData,
       active: techData.active !== false,
       defaultCommissionPercent: techData.defaultCommissionPercent || 0.5,
@@ -482,12 +590,12 @@ class FirebaseDatabase {
   }
 
   async updateTechnician(techId, techData) {
-    await updateDoc(this.docRef('technicians', techId), { ...techData, updatedAt: serverTimestamp() });
+    await trackedUpdateDoc(this.docRef('technicians', techId), { ...techData, updatedAt: serverTimestamp() });
     return true;
   }
 
   async deleteTechnician(techId) {
-    await deleteDoc(this.docRef('technicians', techId));
+    await trackedDeleteDoc(this.docRef('technicians', techId));
     return true;
   }
 
@@ -526,7 +634,7 @@ class FirebaseDatabase {
   async addMaintenanceJob(jobData) {
     const totalPartCost = this.getTotalPartCost(jobData);
     const derived = this.computeDerived(totalPartCost, jobData.amountCharged, jobData.techPercent);
-    const docRef = await addDoc(this.collectionRef('maintenanceJobs'), {
+    const docRef = await trackedAddDoc(this.collectionRef('maintenanceJobs'), {
       ...jobData,
       totalPartCost,
       ...derived,
@@ -541,10 +649,10 @@ class FirebaseDatabase {
     let jobs;
     try {
       if (filters.status) {
-        const snapshot = await getDocs(query(this.collectionRef('maintenanceJobs'), where('status', '==', filters.status)));
+        const snapshot = await countedGetDocs(query(this.collectionRef('maintenanceJobs'), where('status', '==', filters.status)));
         jobs = this.toArray(snapshot);
       } else if (filters.techId) {
-        const snapshot = await getDocs(query(this.collectionRef('maintenanceJobs'), where('techId', '==', filters.techId)));
+        const snapshot = await countedGetDocs(query(this.collectionRef('maintenanceJobs'), where('techId', '==', filters.techId)));
         jobs = this.toArray(snapshot);
       } else {
         jobs = await this.getCollectionRows('maintenanceJobs');
@@ -580,7 +688,7 @@ class FirebaseDatabase {
   }
 
   async getMaintenanceJob(jobId) {
-    const jobSnap = await getDoc(this.docRef('maintenanceJobs', jobId));
+    const jobSnap = await countedGetDoc(this.docRef('maintenanceJobs', jobId));
     if (!jobSnap.exists()) {
       throw new Error('Job not found');
     }
@@ -601,7 +709,7 @@ class FirebaseDatabase {
       Object.assign(nextData, { totalPartCost, ...derived });
     }
 
-    await updateDoc(this.docRef('maintenanceJobs', jobId), {
+    await trackedUpdateDoc(this.docRef('maintenanceJobs', jobId), {
       ...nextData,
       updatedAt: serverTimestamp()
     });
@@ -609,12 +717,12 @@ class FirebaseDatabase {
   }
 
   async deleteMaintenanceJob(jobId) {
-    await deleteDoc(this.docRef('maintenanceJobs', jobId));
+    await trackedDeleteDoc(this.docRef('maintenanceJobs', jobId));
     return true;
   }
 
   async createSettlement(settlementData) {
-    const docRef = await addDoc(this.collectionRef('settlements'), {
+    const docRef = await trackedAddDoc(this.collectionRef('settlements'), {
       ...settlementData,
       status: settlementData.status || 'open',
       createdAt: serverTimestamp(),
@@ -635,7 +743,7 @@ class FirebaseDatabase {
   }
 
   async markSettlementPaid(settlementId, notes = '') {
-    await updateDoc(this.docRef('settlements', settlementId), {
+    await trackedUpdateDoc(this.docRef('settlements', settlementId), {
       status: 'paid',
       paidAt: serverTimestamp(),
       notes,
@@ -645,7 +753,7 @@ class FirebaseDatabase {
   }
 
   async addPayment(paymentData) {
-    const docRef = await addDoc(this.collectionRef('payments'), {
+    const docRef = await trackedAddDoc(this.collectionRef('payments'), {
       ...paymentData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -657,10 +765,10 @@ class FirebaseDatabase {
     let payments;
     try {
       if (filters.entityId) {
-        const snapshot = await getDocs(query(this.collectionRef('payments'), where('entityId', '==', filters.entityId)));
+        const snapshot = await countedGetDocs(query(this.collectionRef('payments'), where('entityId', '==', filters.entityId)));
         payments = this.toArray(snapshot);
       } else if (filters.entityType) {
-        const snapshot = await getDocs(query(this.collectionRef('payments'), where('entityType', '==', filters.entityType)));
+        const snapshot = await countedGetDocs(query(this.collectionRef('payments'), where('entityType', '==', filters.entityType)));
         payments = this.toArray(snapshot);
       } else {
         payments = await this.getCollectionRows('payments');
@@ -681,7 +789,7 @@ class FirebaseDatabase {
   }
 
   async updatePayment(paymentId, paymentData) {
-    await updateDoc(this.docRef('payments', paymentId), {
+    await trackedUpdateDoc(this.docRef('payments', paymentId), {
       ...paymentData,
       updatedAt: serverTimestamp()
     });
@@ -689,7 +797,7 @@ class FirebaseDatabase {
   }
 
   async deletePayment(paymentId) {
-    await deleteDoc(this.docRef('payments', paymentId));
+    await trackedDeleteDoc(this.docRef('payments', paymentId));
     return true;
   }
 
@@ -806,4 +914,7 @@ class FirebaseDatabase {
 
 window.FirebaseDatabase = FirebaseDatabase;
 window.firebaseDatabase = new FirebaseDatabase();
-window.firebaseDatabase.initializeDefaultData();
+// initializeDefaultData() is intentionally NOT called on every page load:
+// it cost a full accessory_categories read per page and, when two pages
+// loaded against an empty collection, seeded duplicate categories.
+// Call window.firebaseDatabase.initializeDefaultData() manually on a fresh database.
