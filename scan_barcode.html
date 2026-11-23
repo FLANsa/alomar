@@ -65,7 +65,9 @@
   // معالجة إرسال الباركود وتوجيه المستخدم للصفحة المناسبة
   function handleSubmit(e){
     e.preventDefault();
-    const code = (document.getElementById('barcode_input').value || '').trim();
+    const arabicDigits = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+    const code = (document.getElementById('barcode_input').value || '').trim()
+      .replace(/[٠-٩]/g, d => arabicDigits[d] || d);
     const productType = document.getElementById('product_type').value || 'phone_new';
     
     if (!code){ 
@@ -75,9 +77,9 @@
     
     // تحديد نوع المنتج من الباركود إذا لم يتم تحديده
     let detectedType = productType;
-    // الإكسسوارات: الرقم المرجعي القديم ACC-YYYYMMDD-0001، أو المعرّف القصير الجديد ACXXXXXX،
-    // أو الصيغة القديمة المجرّدة من الرموز ACCYYYYMMDD0001
-    if (code.startsWith('ACC-') || /^AC[0-9A-Z]{6}$/i.test(code) || /^ACC[0-9]{8,}$/i.test(code)) {
+    // الإكسسوارات: المعرّف الرقمي الجديد 9XXXXXX (7 أرقام)، أو القديم ACXXXXXX (8 رموز)،
+    // أو الرقم المرجعي ACC-YYYYMMDD-0001، أو صيغته المجرّدة من الرموز ACCYYYYMMDD0001
+    if (code.startsWith('ACC-') || /^AC[0-9A-Z]{6}$/i.test(code) || /^9\d{6}$/.test(code) || /^ACC[0-9]{8,}$/i.test(code)) {
       detectedType = 'accessory';
     } else if (code.startsWith('PHONE') || code.match(/^\d+$/)) {
       detectedType = productType.includes('phone') ? productType : 'phone_new';

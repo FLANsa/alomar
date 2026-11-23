@@ -674,27 +674,36 @@
     function normalizeAccessoryCode(value){
       return String(value == null ? '' : value).replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] || d).trim();
     }
-    function shortAccessoryCode(value){
+    // المعرّف الجديد 7 أرقام يبدأ بـ 9؛ legacy=true يعيد صيغة ACXXXXXX القديمة للمطابقة فقط.
+    function shortAccessoryCode(value, legacy){
       const str = normalizeAccessoryCode(value);
       let h = 0x811c9dc5;
       for(let i=0;i<str.length;i++){
         h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
         h = (h + Math.imul(i + 1, 0x85ebca6b)) >>> 0;
       }
-      return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+      if(legacy) return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+      return '9' + String(h % 1000000).padStart(6,'0');
     }
     function isShortAccessoryCode(value){
       return /^[A-Za-z0-9]{6,8}$/.test(normalizeAccessoryCode(value));
     }
-    function matchesAccessoryBarcode(record, code){
+    function matchesAccessoryBarcode(record, code, strict){
       const c = normalizeAccessoryCode(code);
       if(!c || !record) return false;
       return [record.barcode, record.barcode_id, record.sku, record.accessory_number].some(v => {
         if(v == null) return false;
         const s = normalizeAccessoryCode(v);
         return s === c || s.replace(/[^a-zA-Z0-9]/g,'') === c ||
-               (isShortAccessoryCode(c) && shortAccessoryCode(s) === c);
+               (!strict && isShortAccessoryCode(c) &&
+                (shortAccessoryCode(s) === c || shortAccessoryCode(s, true) === c));
       });
+    }
+    // الحقول المخزنة أولاً؛ المشتقات كحل أخير حتى لا يطغى تصادم رقمي على سجل آخر
+    function findBestAccessory(list, code){
+      const rows = Array.isArray(list) ? list : Object.values(list || {});
+      return rows.find(a => matchesAccessoryBarcode(a, code, true)) ||
+             rows.find(a => matchesAccessoryBarcode(a, code)) || null;
     }
 
     // ====== البحث بالباركود (من الهواتف والإكسسوارات) ======
@@ -711,8 +720,11 @@
       const searchTerms = [barcode, englishBarcode, arabicBarcode];
       const uniqueTerms = [...new Set(searchTerms)]; // إزالة التكرار
 
+      // الرقم الإكسسواري الجديد (9xxxxxx) يُبحث في الإكسسوارات أولاً لتجنب التباسه برقم هاتف
+      const numericAccessoryCode = /^9\d{6}$/.test(englishBarcode);
+
       // البحث في الهواتف أولاً
-      const foundPhone = (phones || []).find(ph => {
+      const foundPhone = numericAccessoryCode ? null : (phones || []).find(ph => {
         const phBarcode = ph.phone_number || ph.serial_number;
         const pid = ph.id || ph.phone_number;
         
@@ -723,10 +735,8 @@
       // البحث في الإكسسوارات إذا لم يتم العثور على هاتف
       let foundAccessory = null;
       if (!foundPhone) {
-        foundAccessory = (accessories || []).find(acc =>
-          uniqueTerms.some(term => matchesAccessoryBarcode(acc, term)) &&
-          (acc.quantity_in_stock || acc.quantity || 0) > 0
-        );
+        const inStock = (accessories || []).filter(acc => (acc.quantity_in_stock || acc.quantity || 0) > 0);
+        foundAccessory = uniqueTerms.map(term => findBestAccessory(inStock, term)).find(Boolean) || null;
       }
   
       if (foundPhone) {
@@ -769,14 +779,12 @@
         resultDiv.style.display = 'block';
       } else {
         // التحقق من وجود المنتج ولكن تم بيعه أو نفدت الكمية
-        const anyPhone = (phones || []).find(ph => {
+        const anyPhone = numericAccessoryCode ? null : (phones || []).find(ph => {
           const phBarcode = ph.phone_number || ph.serial_number;
           return phBarcode && uniqueTerms.some(term => String(phBarcode) === term);
         });
         
-        const anyAccessory = (accessories || []).find(acc =>
-          uniqueTerms.some(term => matchesAccessoryBarcode(acc, term))
-        );
+        const anyAccessory = uniqueTerms.map(term => findBestAccessory(accessories, term)).find(Boolean) || null;
 
         if (anyPhone && isPhoneSold(anyPhone.id || anyPhone.phone_number)) {
           resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> هذا الهاتف تم بيعه مسبقاً</div>`;

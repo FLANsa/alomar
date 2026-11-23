@@ -205,6 +205,25 @@
     return str.toString().replace(/[٠-٩]/g, m => map[m] || m);
   }
 
+  // ===== رموز الإكسسوار الرقمية الجديدة + صيغة AC القديمة للمطابقة =====
+  function normalizeAccessoryCode(value){
+    return convertArabicToEnglishNumbers(String(value == null ? '' : value)).trim();
+  }
+  function shortAccessoryCode(value, legacy){
+    const str = normalizeAccessoryCode(value);
+    let h = 0x811c9dc5;
+    for(let i=0;i<str.length;i++){
+      h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+      h = (h + Math.imul(i + 1, 0x85ebca6b)) >>> 0;
+    }
+    if(legacy) return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+    return '9' + String(h % 1000000).padStart(6,'0');
+  }
+  function accessoryDerivedCodes(a){
+    const ref = normalizeAccessoryCode(a && (a.barcode || a.barcode_id));
+    return ref ? [shortAccessoryCode(ref), shortAccessoryCode(ref, true)] : [];
+  }
+
   // ===== تحويل الأرقام الإنجليزية إلى عربية =====
   function convertEnglishToArabicNumbers(str) {
     if (!str) return '';
@@ -321,7 +340,7 @@
       if (type === 'all' || type === 'accessories') {
         accessories = allAccessories.filter(a => {
           // إضافة الباركود و serial_number إلى البحث للأكسسوارات
-          const searchText = `${a.name || ''} ${a.arabic_name || ''} ${a.barcode || ''} ${a.barcode_id || ''} ${a.serial_number || ''} ${a.category || ''}`.toLowerCase();
+          const searchText = `${a.name || ''} ${a.arabic_name || ''} ${a.barcode || ''} ${a.barcode_id || ''} ${a.serial_number || ''} ${a.category || ''} ${accessoryDerivedCodes(a).join(' ')}`.toLowerCase();
           const englishSearchText = convertArabicToEnglishNumbers(searchText);
           const arabicSearchText = convertEnglishToArabicNumbers(searchText);
           

@@ -361,20 +361,23 @@
       return true;
     }
 
-    // ===== معرّف إكسسوار قصير وصالح للمسح على ملصق 40×25mm =====
+    // ===== معرّف إكسسوار رقمي سهل القراءة على ملصق 40×25mm =====
+    // المعرّف الجديد 7 أرقام يبدأ بـ 9 (مثل 9482137)؛ أرقام الهواتف من 6 خانات فقط فلا لبس.
+    // legacy=true يعيد صيغة ACXXXXXX القديمة (8 رموز) للمطابقة مع الملصقات والسجلات القديمة فقط.
     // نفس الدوال موجودة في print_accessory_barcode.html و create_sale.html لضمان تطابق البحث والمسح
     const ARABIC_DIGITS = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
     function normalizeCode(value){
       return String(value == null ? '' : value).replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] || d).trim();
     }
-    function shortAccessoryCode(value){
+    function shortAccessoryCode(value, legacy){
       const str = normalizeCode(value);
       let h = 0x811c9dc5;
       for(let i=0;i<str.length;i++){
         h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
         h = (h + Math.imul(i + 1, 0x85ebca6b)) >>> 0;
       }
-      return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+      if(legacy) return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+      return '9' + String(h % 1000000).padStart(6,'0');
     }
     function isShortCode(value){
       return /^[A-Za-z0-9]{6,8}$/.test(normalizeCode(value));
@@ -388,18 +391,41 @@
       const isGenerated = !!generatedRef && raw === generatedRef;
 
       if(isGenerated && isShortCode(generatedId)){
-        return { reference: raw, shortId: normalizeCode(generatedId), customLong: false };
+        return { reference: raw, shortId: normalizeCode(generatedId), customLong: false, auto: true };
       }
       if(isShortCode(raw)){
         // باركود مخصص قصير: نُبقيه كما هو دون تغيير
-        return { reference: raw, shortId: normalizeCode(raw), customLong: false };
+        return { reference: raw, shortId: normalizeCode(raw), customLong: false, auto: false };
       }
-      // باركود مخصص طويل أو غير صالح لـ CODE128: نحتفظ به كمرجع ونشتق معرّفاً قصيراً
+      // باركود مخصص طويل أو غير صالح لـ CODE128: نحتفظ به كمرجع ونشتق معرّفاً رقمياً
       return {
         reference: raw,
         shortId: shortAccessoryCode(raw + Date.now() + Math.random()),
-        customLong: true
+        customLong: true,
+        auto: true
       };
+    }
+
+    // الأرقام المولّدة من 7 خانات؛ نتحقق من عدم تكرارها قبل الحفظ لتجنب فتح سجل خاطئ عند المسح
+    async function ensureUniqueShortCode(shortId, value){
+      let existing = [];
+      try{
+        if(window.storage && typeof window.storage.getAccessories === 'function'){
+          const rows = await window.storage.getAccessories();
+          existing = Array.isArray(rows) ? rows : Object.values(rows || {});
+        }
+      }catch(e){ console.warn('Unique short id check skipped:', e); }
+      if(!existing.length){
+        try{ existing = JSON.parse(localStorage.getItem('accessories') || '[]'); }catch{}
+      }
+      const used = new Set(existing.map(a => normalizeCode(a && a.barcode_id)).filter(Boolean));
+      let salt = 0;
+      while(used.has(normalizeCode(shortId)) && salt < 1000){
+        salt++;
+        shortId = shortAccessoryCode(`${value}-${salt}`);
+      }
+      document.getElementById('barcode_id').value = shortId;
+      return shortId;
     }
 
     // توليد باركود فريد للإكسسوار
@@ -437,21 +463,28 @@
 
     // طباعة الباركود
     function printBarcode() {
+      // بعد الحفظ يُعاد ضبط النموذج؛ نستعمل بيانات آخر إكسسوار محفوظ إن وُجدت
+      let last = null;
+      try{ last = JSON.parse(localStorage.getItem('lastAddedAccessory')||'null'); }catch{}
       const barcode = document.getElementById('barcode').value.trim();
-      if (!barcode) {
+      let codes = null;
+      if(last && last.barcode_id){
+        codes = { reference: last.barcode || last.barcode_id, shortId: last.barcode_id };
+      }else if(barcode){
+        codes = resolveAccessoryCodes();
+      }else{
         showAlert('warning', 'يرجى إدخال باركود أو توليد باركود أولاً');
         return;
       }
       
-      // نمرّر المعرّف القصير المشفَّر، مع إبقاء الرقم المرجعي كخيار احتياطي للصفحات القديمة
-      const codes = resolveAccessoryCodes();
+      // نمرّر المعرّف الرقمي المشفَّر، مع إبقاء الرقم المرجعي كخيار احتياطي للصفحات القديمة
       try{
         localStorage.setItem('lastAddedAccessory', JSON.stringify({
           barcode: codes.reference,
           barcode_id: codes.shortId,
-          name: document.getElementById('name').value.trim(),
-          arabic_name: document.getElementById('name').value.trim(),
-          selling_price: document.getElementById('selling_price').value.trim()
+          name: document.getElementById('name').value.trim() || last?.name || '',
+          arabic_name: document.getElementById('name').value.trim() || last?.arabic_name || '',
+          selling_price: document.getElementById('selling_price').value.trim() || last?.selling_price || ''
         }));
       }catch(e){ console.warn('تعذر حفظ بيانات تسليم الطباعة:', e); }
 
@@ -503,6 +536,7 @@
       try {
         // جمع بيانات النموذج مع دعم الأرقام العربية
         const codes = resolveAccessoryCodes();
+        if(codes.auto) codes.shortId = await ensureUniqueShortCode(codes.shortId, codes.reference);
         if(codes.customLong){
           showAlert('warning', `الباركود المخصص "${codes.reference}" طويل لملصق 40×25mm؛ سيُحفظ كمرجع، وسيُشفَّر المعرّف القصير ${codes.shortId} على الملصق.`);
         }
@@ -515,7 +549,7 @@
           arabic_name: document.getElementById('name').value.trim(), // استخدام نفس الاسم
           category: document.getElementById('category').value,
           barcode: codes.reference, // الرقم المرجعي الظاهر (ACC-YYYYMMDD-0001 أو باركود مخصص)
-          barcode_id: codes.shortId, // المعرّف القصير (8 رموز) المستخدم في المسح والطباعة
+          barcode_id: codes.shortId, // المعرّف الرقمي (7 أرقام) المستخدم في المسح والطباعة
           quantity: parseInt(convertArabicToEnglishNumbers(quantityRaw)) || 0,
           quantity_in_stock: parseInt(convertArabicToEnglishNumbers(quantityRaw)) || 0, // إضافة quantity_in_stock
           purchase_price: parseArabicNumber(purchasePriceRaw),
