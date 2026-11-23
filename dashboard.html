@@ -807,6 +807,11 @@
       await updateDashboard();
     }, 5 * 60 * 1000);
   });
+
+  // العودة من bfcache: تحديث البيانات دون إعادة تحميل كاملة للصفحة
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) updateDashboard();
+  });
 </script>
 
 <!-- Navigation Script -->

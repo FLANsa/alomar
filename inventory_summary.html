@@ -549,6 +549,11 @@
     // تحديث البيانات كل 5 دقائق (كان كل 10 ثوانٍ ويستنزف حصة قراءات Firestore)
     setInterval(updateInventorySummary, 5 * 60 * 1000);
   });
+
+  // العودة من bfcache: تحديث البيانات دون إعادة تحميل كاملة للصفحة
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) updateInventorySummary();
+  });
 </script>
 
 <!-- Navigation Script -->

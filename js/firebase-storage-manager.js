@@ -453,6 +453,98 @@ class FirebaseStorageManager {
     return false;
   }
 
+  /**
+   * استرجاع فاتورة: يعيد مخزون الأكسسوارات ويعلم الفاتورة مسترجعة.
+   * في وضع Firebase تُنفَّذ العملية داخل معاملة ذرّية، والأخطاء تُرمى ولا تُبتلع.
+   * في وضع localStorage تُحسب كل التغييرات في الذاكرة ثم تُكتب sales وaccessories معاً.
+   */
+  async returnSale(saleId, returnedAt) {
+    const at = returnedAt || new Date().toISOString();
+
+    if (this.refreshFirebaseAvailability()) {
+      // لا نمسك الخطأ هنا: يجب أن يصل إلى واجهة الاسترجاع كي لا يظهر نجاح وهمي
+      return await this.firebaseDB.returnSale(saleId, at);
+    }
+
+    // ===== وضع localStorage (بديل) =====
+    const sales = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.SALES) || '[]');
+    const accessories = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEYS.ACCESSORIES) || '[]');
+
+    const index = sales.findIndex(s => s && String(s.id) === String(saleId));
+    if (index === -1) {
+      throw new Error('الفاتورة غير موجودة في قاعدة البيانات، حدّث الصفحة وأعد المحاولة');
+    }
+
+    const sale = sales[index];
+    if (sale.returned === true || sale.status === 'مسترجعة') {
+      return { alreadyReturned: true, restocked: [], skipped: [] };
+    }
+
+    const items = Array.isArray(sale.items) ? sale.items : [];
+    const skipped = [];
+    const totals = new Map(); // فهرس الأكسسوار -> الكمية المجمّعة
+
+    for (const item of items) {
+      if (!item || item.type === 'phone') continue;
+      const qty = Number(item.quantity) || 0;
+      if (qty <= 0) continue;
+
+      const accIndex = accessories.findIndex(a => a && (
+        a.id === item.id ||
+        a.sku === item.id ||
+        a.barcode === item.id ||
+        a.accessory_number === item.id
+      ));
+
+      if (accIndex === -1) {
+        skipped.push({
+          id: item.id ?? item.name ?? 'غير معروف',
+          name: item.name || null,
+          reason: 'الأكسسوار غير موجود في المخزون المحلي'
+        });
+        continue;
+      }
+
+      totals.set(accIndex, (totals.get(accIndex) || 0) + qty);
+    }
+
+    // حساب كل شيء في الذاكرة أولاً — لا كتابة قبل نجاح الحساب
+    const restocked = [];
+    const updatedAccessories = accessories.map((acc, i) => {
+      const qty = totals.get(i);
+      if (!qty) return acc;
+      const currentStock = Number(acc.quantity_in_stock ?? acc.quantity ?? 0);
+      const newStock = currentStock + qty;
+      restocked.push({ id: acc.id, name: acc.name || acc.id, added: qty });
+      return { ...acc, quantity_in_stock: newStock, quantity: newStock, updatedAt: new Date().toISOString() };
+    });
+
+    const updatedSales = sales.slice();
+    updatedSales[index] = {
+      ...sale,
+      returned: true,
+      status: 'مسترجعة',
+      returned_at: at,
+      updatedAt: new Date().toISOString()
+    };
+
+    // كتابة الاثنين معاً، مع تراجع عن الأولى إن فشلت الثانية
+    const salesRawBefore = localStorage.getItem(CONFIG.STORAGE_KEYS.SALES);
+    const accessoriesRawBefore = localStorage.getItem(CONFIG.STORAGE_KEYS.ACCESSORIES);
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.SALES, JSON.stringify(updatedSales));
+      localStorage.setItem(CONFIG.STORAGE_KEYS.ACCESSORIES, JSON.stringify(updatedAccessories));
+    } catch (error) {
+      if (salesRawBefore === null) localStorage.removeItem(CONFIG.STORAGE_KEYS.SALES);
+      else localStorage.setItem(CONFIG.STORAGE_KEYS.SALES, salesRawBefore);
+      if (accessoriesRawBefore === null) localStorage.removeItem(CONFIG.STORAGE_KEYS.ACCESSORIES);
+      else localStorage.setItem(CONFIG.STORAGE_KEYS.ACCESSORIES, accessoriesRawBefore);
+      throw error;
+    }
+
+    return { alreadyReturned: false, restocked, skipped };
+  }
+
   async deleteSale(saleId) {
     if (this.refreshFirebaseAvailability()) {
       try {

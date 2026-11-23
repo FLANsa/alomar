@@ -75,7 +75,9 @@
     
     // تحديد نوع المنتج من الباركود إذا لم يتم تحديده
     let detectedType = productType;
-    if (code.startsWith('ACC-')) {
+    // الإكسسوارات: الرقم المرجعي القديم ACC-YYYYMMDD-0001، أو المعرّف القصير الجديد ACXXXXXX،
+    // أو الصيغة القديمة المجرّدة من الرموز ACCYYYYMMDD0001
+    if (code.startsWith('ACC-') || /^AC[0-9A-Z]{6}$/i.test(code) || /^ACC[0-9]{8,}$/i.test(code)) {
       detectedType = 'accessory';
     } else if (code.startsWith('PHONE') || code.match(/^\d+$/)) {
       detectedType = productType.includes('phone') ? productType : 'phone_new';

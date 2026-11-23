@@ -825,6 +825,11 @@
     }
   });
 
+  // العودة من bfcache: إعادة تحميل البيانات بما فيها المبيعات حتى يتغير حساب التوفر
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) loadAllData();
+  });
+
   // ===== طباعة الباركود =====
   function goPrintBarcode(rawCode) {
     const code = String(rawCode || '').trim();

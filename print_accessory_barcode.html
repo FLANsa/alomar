@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>طباعة باركود الإكسسوار — طلال للاتصالات</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -26,14 +26,18 @@
     .card-header h3 { margin:0; font-size:1.1rem; font-weight:700; }
     .card-body { padding:20px; }
     .sticker-preview{ border:2px dashed var(--muted); padding:20px; background:#f9f9f9; border-radius:10px; display:flex; justify-content:center; margin-bottom:18px; }
-    .sticker{ width:6cm; height:3cm; background:#fff; border:1px solid #ddd; box-sizing:border-box; display:flex; flex-direction:column; padding:0.2cm; gap:0.15cm; }
-    .row2{ display:flex; flex-direction:column; align-items:center; text-align:center; width:50%; line-height:1.1; }
-    .label{ color:#222; font-weight:700; font-size:3.0mm; line-height:1.1; text-align:center; }
-    .value{ color:#000; font-weight:600; font-size:3.0mm; line-height:1.05; text-align:center; }
-    .shop{ text-align:center; font-weight:700; font-size:4.5mm; line-height:1.1; margin-bottom:0.1cm; }
-    .rows{ display:flex; flex-direction:row; gap:0.1cm; justify-content:space-between; margin-top:-0.2cm; }
-    .info-vertical{ display:flex; flex-direction:column; align-items:center; gap:0.05cm; margin-top:0; }
-    .sticker-barcode canvas{ width:100%; height:auto; max-height:2.2cm; image-rendering:crisp-edges; image-rendering:pixelated; display:block; }
+
+    /* مقاس الملصق ونظام التخطيط مطابقان حرفياً لصفحة باركود الهاتف */
+    .sticker{ width:40mm; height:25mm; background:#fff; box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden; padding:2.15mm 3.4mm 1.15mm; color:#000; }
+    .shop{ flex:0 0 auto; text-align:center; font-weight:900; font-size:3.75mm; line-height:0.95; white-space:nowrap; margin:0 0 0.9mm; }
+    .sticker-barcode{ flex:0 0 auto; height:6.35mm; display:flex; align-items:stretch; justify-content:center; margin:0 0 0.85mm; }
+    .sticker-barcode canvas{ width:100%; height:100%; image-rendering:crisp-edges; image-rendering:pixelated; display:block; }
+    .rows{ flex:0 0 auto; display:flex; flex-direction:row; gap:0.5mm; justify-content:space-between; align-items:flex-start; margin:0; }
+    .row2{ display:flex; flex:1 1 0; min-width:0; flex-direction:column; align-items:center; text-align:center; line-height:1; }
+    .label{ color:#111; font-weight:900; font-size:1.85mm; line-height:1; text-align:center; white-space:nowrap; margin-bottom:0.5mm; }
+    .value{ color:#000; font-weight:900; font-size:3.25mm; line-height:0.95; text-align:center; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+    #accessory-name{ min-width:0; }
+
     .actions{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn{ appearance:none; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700; font-family:inherit; }
     .btn-primary{ background:#10b981; color:#fff; }
@@ -59,9 +63,15 @@
           <div id="sticker" class="sticker">
             <div class="shop">طلال للاتصالات</div>
             <div class="sticker-barcode"><canvas id="barcode-canvas"></canvas></div>
-            <div class="info-vertical">
-              <div class="value" id="accessory-name">جاري التحميل...</div>
-              <div class="value" id="selling-price">جاري التحميل...</div>
+            <div class="rows">
+              <div class="row2">
+                <div class="label">الإكسسوار</div>
+                <div class="value" id="accessory-name">جاري التحميل...</div>
+              </div>
+              <div class="row2">
+                <div class="label">السعر</div>
+                <div class="value" id="selling-price">جاري التحميل...</div>
+              </div>
             </div>
           </div><!-- /sticker -->
         </div><!-- /preview -->
@@ -71,29 +81,76 @@
 
 <script>
 (function(){
-  // Sticker output size - نفس مقاس ملصق الجوال
+  // مقاس الإخراج — مطابق لصفحة باركود الهاتف
   const STICKER_MM = { w:40, h:25 }, DPI = 300, PX_PER_MM = DPI/25.4;
   const TARGET_W = Math.round(STICKER_MM.w * PX_PER_MM);
   const TARGET_H = Math.round(STICKER_MM.h * PX_PER_MM);
 
+  const ARABIC_DIGITS = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+  function normalizeCode(value){
+    return String(value == null ? '' : value).replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] || d).trim();
+  }
+
+  // معرّف قصير (8 رموز) يُشفّر في CODE128 على ملصق 40×25mm.
+  // نفس الدالة مستخدمة في add_accessory.html و create_sale.html لضمان تطابق المسح.
+  function shortAccessoryCode(value){
+    const str = normalizeCode(value);
+    let h = 0x811c9dc5;
+    for(let i=0;i<str.length;i++){
+      h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+      h = (h + Math.imul(i + 1, 0x85ebca6b)) >>> 0;
+    }
+    return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+  }
+  function isShortCode(value){
+    return /^[A-Za-z0-9]{6,8}$/.test(normalizeCode(value));
+  }
+
+  // يقبل المعرّف القصير الجديد، والباركود المرجعي القديم ACC-YYYYMMDD-0001،
+  // والمعرّف المختصر المشتق من سجل قديم لم يُحدَّث بعد.
+  function matchesBarcode(record, code){
+    const c = normalizeCode(code);
+    if(!c || !record) return false;
+    const fields = [record.barcode, record.barcode_id, record.sku, record.accessory_number];
+    return fields.some(v => {
+      if(v == null) return false;
+      const s = normalizeCode(v);
+      const flat = s.replace(/[^a-zA-Z0-9]/g, '');
+      return s === c || flat === c || (isShortCode(c) && shortAccessoryCode(s) === c);
+    });
+  }
+
   const stickerEl = document.getElementById('sticker');
   const btnDownload = document.getElementById('btnDownloadPDF');
   const btnPrint = document.getElementById('btnPrintPDF');
+  let currentBarcode = '';
 
   function generateBarcode(code){
     const canvas = document.getElementById('barcode-canvas');
     if(!canvas || !window.JsBarcode) return;
-    JsBarcode(canvas, String(code||'').trim(), {
+    const options = {
       format:"CODE128",
       width:3,
-      height:80,
+      height:70,
       displayValue:false,
       background:"#ffffff",
-      lineColor:"#000000"
-    });
+      lineColor:"#000000",
+      margin:2
+    };
+    let value = normalizeCode(code) || '-';
+    try{
+      JsBarcode(canvas, value, options);
+    }catch(error){
+      // أي قيمة غير صالحة لـ CODE128 تُحوَّل إلى معرّف قصير بدل تشويه الرسم أو كسر الصفحة
+      console.warn('JsBarcode failed, using short fallback:', error);
+      value = shortAccessoryCode(value);
+      JsBarcode(canvas, value, options);
+    }
+    currentBarcode = value;
   }
 
   async function captureStickerCanvas(){
+    // عنصر الملصق himself بنسبة 40:25، لذلك scaleX === scaleY ولا يحدث stretch عند addImage
     const scaleX = TARGET_W / stickerEl.clientWidth;
     const scaleY = TARGET_H / stickerEl.clientHeight;
     const scale = Math.min(scaleX, scaleY);
@@ -138,10 +195,17 @@
     return { name, priceText };
   }
 
+  // القيمة التي تُشفَّر فعلياً: المعرّف القصير المخزَّن، أو مشتق منه للسجلات القديمة
+  function encodeValueFor(accessory, passed){
+    if(accessory && isShortCode(accessory.barcode_id)) return normalizeCode(accessory.barcode_id);
+    const reference = normalizeCode(accessory?.barcode || accessory?.barcode_id || passed);
+    if(isShortCode(reference)) return reference;
+    return shortAccessoryCode(reference || 'ACC');
+  }
+
   function fillSticker({name, priceText}){
     document.getElementById('accessory-name').textContent = name || '-';
     document.getElementById('selling-price').textContent = priceText || '-';
-    
     generateBarcode(currentBarcode || '-');
   }
 
@@ -151,33 +215,23 @@
     // 1) Fast handoff from add page
     try{
       const last = JSON.parse(localStorage.getItem('lastAddedAccessory')||'null');
-      if(last && (String(last.barcode)===String(barcode) || String(last.barcode_id)===String(barcode))){
-        return last;
-      }
+      if(matchesBarcode(last, barcode)) return last;
     }catch{}
 
     // 2) Firebase (if available)
     try{
       if(window.storage && window.storage.isFirebaseAvailable){
-        // If your API has a direct method, prefer it:
         if(typeof window.storage.getAccessoryByBarcode === 'function'){
           const one = await window.storage.getAccessoryByBarcode(String(barcode));
           if(one) return one;
         }
-        // Otherwise scan list (supports object or array):
         const all = await window.storage.getAccessories();
         if(all){
           if(Array.isArray(all)){
-            const found = all.find(a => 
-              String(a.barcode)===String(barcode) || 
-              String(a.barcode_id)===String(barcode)
-            );
+            const found = all.find(a => matchesBarcode(a, barcode));
             if(found) return found;
           }else if(typeof all==='object'){
-            const found = Object.values(all).find(a => 
-              String(a.barcode)===String(barcode) || 
-              String(a.barcode_id)===String(barcode)
-            );
+            const found = Object.values(all).find(a => matchesBarcode(a, barcode));
             if(found) return found;
           }
         }
@@ -188,10 +242,7 @@
     try{
       const arr = JSON.parse(localStorage.getItem('accessories')||'[]');
       if(Array.isArray(arr)){
-        const found = arr.find(a => 
-          String(a.barcode)===String(barcode) || 
-          String(a.barcode_id)===String(barcode)
-        );
+        const found = arr.find(a => matchesBarcode(a, barcode));
         if(found) return found;
       }
     }catch{}
@@ -199,47 +250,49 @@
     return null;
   }
 
-  let currentBarcode = '';
-
   async function loadAccessoryData(){
     // allow Firebase modules to initialize
     await new Promise(r => setTimeout(r, 300));
 
     const urlParams = new URLSearchParams(window.location.search);
     const barcode = urlParams.get('barcode');
+    const ref = urlParams.get('ref');
 
     if(barcode){
-      currentBarcode = barcode;
       const accessory = await findAccessoryByBarcode(barcode);
+      currentBarcode = encodeValueFor(accessory, ref || barcode);
       if(accessory){
         fillSticker(valuesFromAccessory(accessory));
         return;
-      }else{
-        // If not found anywhere, still show the code the user passed
-        fillSticker({ name: 'إكسسوار غير محدد', priceText: '-' });
-        alert('لم يتم العثور على بيانات الإكسسوار في القاعدة، تم استخدام الباركود فقط.');
-        return;
       }
+      // لا سجل مطابق: نطبع معرّفاً قصيراً صالحاً للمسح دون تشويه CODE128
+      fillSticker({ name: 'إكسسوار غير محدد', priceText: '-' });
+      console.warn('Accessory not found; printed short code:', currentBarcode);
+      return;
     }
 
-    // No ?barcode= : try lastAddedAccessory directly (user came here manually after adding)
+    // No ?barcode= : try lastAddedAccessory directly
     try{
       const last = JSON.parse(localStorage.getItem('lastAddedAccessory')||'null');
       if(last){
-        currentBarcode = last.barcode || last.barcode_id || '';
+        currentBarcode = encodeValueFor(last, last.barcode || last.barcode_id);
         fillSticker(valuesFromAccessory(last));
         return;
       }
     }catch{}
 
-    // Finally, generate a new label if nothing provided
-    const generated = (() => {
-      let last = localStorage.getItem('lastAccessorySerial')||'0';
-      const next = (parseInt(last,10)+1); localStorage.setItem('lastAccessorySerial', String(next));
-      return `ACC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${String(next).padStart(4,'0')}`;
-    })();
-    currentBarcode = generated;
+    // Finally, generate a short label if nothing provided; keep the long reference as internal data
+    const today = new Date();
+    const dateStr = today.getFullYear().toString() +
+                    String(today.getMonth()+1).padStart(2,'0') +
+                    String(today.getDate()).padStart(2,'0');
+    const key = `lastAccessorySerial_${dateStr}`;
+    const next = (parseInt(localStorage.getItem(key)||'0', 10) + 1);
+    localStorage.setItem(key, String(next));
+    const reference = `ACC-${dateStr}-${String(next).padStart(4,'0')}`;
+    currentBarcode = shortAccessoryCode(reference + Date.now() + Math.random());
     fillSticker({ name: 'إكسسوار جديد', priceText: '0 ريال' });
+    console.info('Accessory reference (internal):', reference, '| short code:', currentBarcode);
   }
 
   document.addEventListener('DOMContentLoaded', loadAccessoryData);

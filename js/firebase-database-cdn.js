@@ -35,11 +35,15 @@ async function countedGetDoc(ref) {
 // Full-collection cache: memory + sessionStorage so navigation between pages
 // doesn't refetch everything. Writes invalidate the collection's entry.
 const CACHE_PREFIX = 'fscache:';
+// مدة خاصة بالمبيعات: أثر أي استرجاع من جهاز آخر يظهر خلال 30 ثانية كحد أقصى
+const SALES_CACHE_TTL_MS = 30 * 1000;
 const CACHE_TTL_MS = {
   phone_types: 10 * 60 * 1000,
   accessory_categories: 10 * 60 * 1000,
   reps: 5 * 60 * 1000,
-  technicians: 5 * 60 * 1000
+  technicians: 5 * 60 * 1000,
+  // المبيعات قصيرة الأجل: تغيير الفاتورة (بيع/استرجاع) من جهاز آخر يظهر خلال 30 ثانية.
+  sales: SALES_CACHE_TTL_MS
 };
 const DEFAULT_CACHE_TTL_MS = 60 * 1000;
 const memCache = new Map();
@@ -115,6 +119,11 @@ class FirebaseDatabase {
   }
 
   invalidateCache(collectionName) {
+    invalidateCache(collectionName);
+  }
+
+  // اسم بديل أوضح تُستخدم به في مسار الاسترجاع
+  invalidateCollectionCache(collectionName) {
     invalidateCache(collectionName);
   }
 
@@ -453,6 +462,141 @@ class FirebaseDatabase {
   async updateSale(saleId, saleData) {
     await trackedUpdateDoc(this.docRef('sales', saleId), { ...saleData, updatedAt: serverTimestamp() });
     return true;
+  }
+
+  // حلّ مرجع مستند الأكسسوار من بند الفاتورة (يدعم id أو sku/barcode/accessory_number للفواتير القديمة)
+  async resolveAccessoryRef(item) {
+    const id = item && item.id;
+    if (id === undefined || id === null || id === '') return null;
+
+    const directRef = this.docRef('accessories', id);
+    const directSnap = await countedGetDoc(directRef);
+    if (directSnap.exists()) {
+      return { ref: directRef, name: directSnap.data().name || item.name || String(id) };
+    }
+
+    for (const field of ['sku', 'barcode', 'accessory_number']) {
+      const found = await this.findFirstByField('accessories', field, [id]);
+      if (found) {
+        return { ref: found.ref, name: found.data().name || item.name || found.id };
+      }
+    }
+
+    return null;
+  }
+
+  // استرجاع فاتورة: يُعلَّم البيع مسترجعة ويُعاد مخزون الأكسسوارات داخل معاملة واحدة.
+  // العملية ذرّية (إما الكل أو لا شيء) ومتكررة بأمان (الفحص داخل المعاملة).
+  // الهاتف لا يُلمس: توفره يُحسب تلقائياً باستبعاد الفواتير المسترجعة.
+  async returnSale(saleId, returnedAt) {
+    if (saleId === undefined || saleId === null || saleId === '') {
+      throw new Error('معرّف الفاتورة غير موجود');
+    }
+
+    const saleRef = this.docRef('sales', saleId);
+    const at = returnedAt || new Date().toISOString(); // حماية من قيمة undefined في كتابة Firestore
+
+    // قراءة أولية خارج المعاملة: للتحقق من الحالة وحلّ مراجع الأكسسوارات قبل بدء المعاملة
+    const initialSnap = await countedGetDoc(saleRef);
+    if (!initialSnap.exists()) {
+      throw new Error('الفاتورة غير موجودة في قاعدة البيانات، حدّث الصفحة وأعد المحاولة');
+    }
+
+    const initialSale = initialSnap.data();
+    if (initialSale.returned === true || initialSale.status === 'مسترجعة') {
+      return { alreadyReturned: true, restocked: [], skipped: [] };
+    }
+
+    const items = Array.isArray(initialSale.items) ? initialSale.items : [];
+    const unresolved = [];           // أكسسوارات لم نجد لها مستنداً
+    const resolved = new Map();      // docPath -> { ref, name, quantity }
+
+    for (const item of items) {
+      if (!item || item.type === 'phone') continue; // الهاتف يُتجاهل عمداً
+      const qty = Number(item.quantity) || 0;
+      if (qty <= 0) continue;
+
+      const found = await this.resolveAccessoryRef(item);
+      if (!found) {
+        unresolved.push({
+          id: item.id ?? item.name ?? 'غير معروف',
+          name: item.name || null,
+          reason: 'الأكسسوار غير موجود في مجموعة accessories'
+        });
+        continue;
+      }
+
+      const existing = resolved.get(found.ref.path);
+      if (existing) {
+        existing.quantity += qty; // نفس الأكسسوار في أكثر من بند
+      } else {
+        resolved.set(found.ref.path, { ref: found.ref, name: found.name, quantity: qty });
+      }
+    }
+
+    const result = await runTransaction(this.getDb(), async (transaction) => {
+      const saleSnap = await transaction.get(saleRef);
+      if (!saleSnap.exists()) {
+        throw new Error('الفاتورة غير موجودة في قاعدة البيانات، حدّث الصفحة وأعد المحاولة');
+      }
+
+      const sale = saleSnap.data();
+      // الحماية الحقيقية من التكرار: الفحص داخل المعاملة نفسها
+      if (sale.returned === true || sale.status === 'مسترجعة') {
+        return { alreadyReturned: true, restocked: [], skipped: [] };
+      }
+
+      // قاعدة Firestore: كل القراءات قبل كل الكتابات
+      const reads = [];
+      for (const entry of resolved.values()) {
+        const snap = await transaction.get(entry.ref);
+        reads.push({ entry, snap });
+      }
+
+      const restocked = [];
+      const skipped = [];
+
+      for (const { entry, snap } of reads) {
+        if (!snap.exists()) {
+          skipped.push({ id: entry.ref.id, name: entry.name, reason: 'الأكسسوار حُذف من قاعدة البيانات' });
+          continue;
+        }
+
+        const data = snap.data();
+        const currentStock = Number(data.quantity_in_stock ?? data.quantity ?? 0);
+        const newStock = currentStock + entry.quantity;
+
+        transaction.update(entry.ref, {
+          quantity_in_stock: newStock,
+          quantity: newStock,
+          updatedAt: serverTimestamp()
+        });
+
+        restocked.push({
+          id: entry.ref.id,
+          name: data.name || entry.name || entry.ref.id,
+          added: entry.quantity
+        });
+      }
+
+      transaction.update(saleRef, {
+        returned: true,
+        status: 'مسترجعة',
+        returned_at: at,
+        updatedAt: serverTimestamp()
+      });
+
+      return { alreadyReturned: false, restocked, skipped };
+    });
+
+    this.invalidateCollectionCache('sales');
+    this.invalidateCollectionCache('accessories');
+
+    return {
+      alreadyReturned: !!result.alreadyReturned,
+      restocked: result.restocked || [],
+      skipped: [...unresolved, ...(result.skipped || [])]
+    };
   }
 
   async deleteSale(saleId) {

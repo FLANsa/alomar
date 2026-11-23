@@ -668,6 +668,35 @@
       updateCartDisplay();
     }
   
+    // ====== دعم معرّف الإكسسوار القصير + الباركود المرجعي القديم ======
+    // نفس منطق print_accessory_barcode.html و add_accessory.html لضمان عمل المسح بعد الطباعة
+    const ARABIC_DIGITS = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+    function normalizeAccessoryCode(value){
+      return String(value == null ? '' : value).replace(/[٠-٩]/g, d => ARABIC_DIGITS[d] || d).trim();
+    }
+    function shortAccessoryCode(value){
+      const str = normalizeAccessoryCode(value);
+      let h = 0x811c9dc5;
+      for(let i=0;i<str.length;i++){
+        h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+        h = (h + Math.imul(i + 1, 0x85ebca6b)) >>> 0;
+      }
+      return 'AC' + h.toString(36).toUpperCase().padStart(6,'0').slice(-6);
+    }
+    function isShortAccessoryCode(value){
+      return /^[A-Za-z0-9]{6,8}$/.test(normalizeAccessoryCode(value));
+    }
+    function matchesAccessoryBarcode(record, code){
+      const c = normalizeAccessoryCode(code);
+      if(!c || !record) return false;
+      return [record.barcode, record.barcode_id, record.sku, record.accessory_number].some(v => {
+        if(v == null) return false;
+        const s = normalizeAccessoryCode(v);
+        return s === c || s.replace(/[^a-zA-Z0-9]/g,'') === c ||
+               (isShortAccessoryCode(c) && shortAccessoryCode(s) === c);
+      });
+    }
+
     // ====== البحث بالباركود (من الهواتف والإكسسوارات) ======
     function searchByBarcode() {
       const barcode = document.getElementById('barcode_search').value.trim();
@@ -694,10 +723,10 @@
       // البحث في الإكسسوارات إذا لم يتم العثور على هاتف
       let foundAccessory = null;
       if (!foundPhone) {
-        foundAccessory = (accessories || []).find(acc => {
-          const accBarcode = acc.barcode || acc.barcode_id;
-          return accBarcode && uniqueTerms.some(term => String(accBarcode) === term) && (acc.quantity_in_stock || acc.quantity || 0) > 0;
-        });
+        foundAccessory = (accessories || []).find(acc =>
+          uniqueTerms.some(term => matchesAccessoryBarcode(acc, term)) &&
+          (acc.quantity_in_stock || acc.quantity || 0) > 0
+        );
       }
   
       if (foundPhone) {
@@ -745,10 +774,9 @@
           return phBarcode && uniqueTerms.some(term => String(phBarcode) === term);
         });
         
-        const anyAccessory = (accessories || []).find(acc => {
-          const accBarcode = acc.barcode || acc.barcode_id;
-          return accBarcode && uniqueTerms.some(term => String(accBarcode) === term);
-        });
+        const anyAccessory = (accessories || []).find(acc =>
+          uniqueTerms.some(term => matchesAccessoryBarcode(acc, term))
+        );
 
         if (anyPhone && isPhoneSold(anyPhone.id || anyPhone.phone_number)) {
           resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times-circle"></i> هذا الهاتف تم بيعه مسبقاً</div>`;
@@ -981,6 +1009,21 @@
         window.location.href = 'index.html';
       }
     }
+
+    // العودة من bfcache: إعادة تحميل المبيعات (السلة تبقى كما هي) وتحديث قائمة الهواتف المتاحة
+    window.addEventListener('pageshow', async (event) => {
+      if (!event.persisted) return;
+      try {
+        if (window.storage && window.storage.isFirebaseAvailable) {
+          await loadDataFromFirebase();
+        } else {
+          await loadDataFromLocalStorage();
+        }
+        loadProducts();
+      } catch (error) {
+        console.error('❌ خطأ في تحديث بيانات الصفحة عند العودة:', error);
+      }
+    });
   </script>
 
   <!-- Navigation Script -->
